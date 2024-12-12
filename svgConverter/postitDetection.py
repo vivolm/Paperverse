@@ -1,14 +1,13 @@
 import cv2
 import numpy as np
-import time
 
 def detect_postit_and_draw(frame):
-    # Convert the frame to HSV (better for color detection)
+    # Convert the frame to HSV for better color detection
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    # Define the color range for yellow (adjust as needed for your post-it note color)
-    lower_yellow = np.array([20, 100, 100])
-    upper_yellow = np.array([30, 255, 255])
+    # Define the color range for yellow (adjust as needed for your Post-It note color)
+    lower_yellow = np.array([20, 30, 70])
+    upper_yellow = np.array([50, 255, 255])
 
     # Create a mask for the yellow color
     mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
@@ -19,13 +18,46 @@ def detect_postit_and_draw(frame):
     for contour in contours:
         # Filter small contours
         if cv2.contourArea(contour) > 1000:
-            # Get the bounding box for the post-it note
-            x, y, w, h = cv2.boundingRect(contour)
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
+            # Approximate the contour to get a polygon
+            epsilon = 0.02 * cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, epsilon, True)
 
-            # Return the cropped post-it note region
-            cropped = frame[y:y+h, x:x+w]
-            return cropped
+            # If the polygon has four sides, we assume it is the Post-It note
+            if len(approx) == 4:
+                # Perform a perspective transformation to align the Post-It
+                pts = np.array([point[0] for point in approx], dtype='float32')
+
+                # Order points in consistent order: top-left, top-right, bottom-right, bottom-left
+                def order_points(pts):
+                    rect = np.zeros((4, 2), dtype='float32')
+                    s = pts.sum(axis=1)
+                    rect[0] = pts[np.argmin(s)]  # Top-left
+                    rect[2] = pts[np.argmax(s)]  # Bottom-right
+                    diff = np.diff(pts, axis=1)
+                    rect[1] = pts[np.argmin(diff)]  # Top-right
+                    rect[3] = pts[np.argmax(diff)]  # Bottom-left
+                    return rect
+
+                rect = order_points(pts)
+
+                # Define the width and height of the Post-It note (adjust as needed)
+                width = 200
+                height = 200
+                dst = np.array([
+                    [0, 0],
+                    [width - 1, 0],
+                    [width - 1, height - 1],
+                    [0, height - 1]
+                ], dtype='float32')
+
+                # Compute the perspective transform matrix and apply it
+                M = cv2.getPerspectiveTransform(rect, dst)
+                warped = cv2.warpPerspective(frame, M, (width, height))
+
+                # Draw the bounding polygon on the original frame
+                cv2.polylines(frame, [approx], True, (0, 255, 0), 2)
+
+                return warped
 
     return None
 
@@ -40,15 +72,16 @@ def detect_drawing(prev_frame, current_frame):
     non_zero_pixels = cv2.countNonZero(thresh)
 
     # Return True if changes exceed a reduced threshold
-    return non_zero_pixels > 1500  # Lowered sensitivity threshold
+    return non_zero_pixels > 1500
 
 def main():
     cap = cv2.VideoCapture(0)
+
+
     prev_frame = None
-    change_counter = 0  # Counter for persistent changes
-    threshold_frames = 5  # Number of frames with changes before taking a picture
-    capture_time = None  # Time when we start the delay for capturing
-    capture_delay = 4  # Delay (in seconds) before capturing after detecting drawing
+    drawing_detected = False
+    no_movement_counter = 0  # Counter for consecutive frames with no movement
+    movement_threshold = 10  # Number of consecutive no-movement frames to confirm drawing is done
 
     while True:
         ret, frame = cap.read()
@@ -58,45 +91,38 @@ def main():
         # Resize frame for faster processing
         frame = cv2.resize(frame, (640, 480))
 
-        # Detect post-it note and crop the region
+        # Detect Post-It note and crop the region
         cropped = detect_postit_and_draw(frame)
 
         if cropped is not None:
-            # Convert cropped post-it note region to grayscale
+            # Convert cropped Post-It note region to grayscale
             gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
-            gray_cropped = cv2.GaussianBlur(gray_cropped, (11, 11), 0)  # Smaller blur kernel
-
-            # Standardize the size of the cropped frames
-            gray_cropped = cv2.resize(gray_cropped, (200, 200))  # Resize to fixed size (200x200)
+            gray_cropped = cv2.GaussianBlur(gray_cropped, (11, 11), 0)
 
             # Initialize previous frame for the cropped region
             if prev_frame is None:
                 prev_frame = gray_cropped
                 continue
 
-            # Detect drawing activity within the cropped post-it region
+            # Detect drawing activity within the cropped Post-It region
             if detect_drawing(prev_frame, gray_cropped):
-                change_counter += 1
+                drawing_detected = True
+                no_movement_counter = 0  # Reset counter when movement is detected
             else:
-                change_counter = 0  # Reset counter if no persistent change
+                if drawing_detected:
+                    no_movement_counter += 1
 
-            # Start capture delay once the change counter meets the threshold
-            if change_counter >= threshold_frames:
-                if capture_time is None:
-                    print("Drawing detected! Starting delay before capture...")
-                    capture_time = time.time() + capture_delay  # Set capture time with delay
-
-            # Capture image only if the delay has passed
-            if capture_time is not None and time.time() >= capture_time:
-                print("Capturing image...")
+            # Capture image if no movement is detected for the threshold
+            if no_movement_counter >= movement_threshold:
+                print("Drawing completed! Capturing image...")
                 cv2.imwrite("detected_postit.png", cropped)
-                print("Cropped post-it note saved as detected_postit.png")
+                print("Cropped Post-It note saved as detected_postit.png")
                 break
 
             # Update the previous frame for the cropped region
             prev_frame = gray_cropped
 
-        # Show the video feed with the detected post-it
+        # Show the video feed with the detected Post-It
         cv2.imshow("Webcam", frame)
 
         # Press 'q' to quit
