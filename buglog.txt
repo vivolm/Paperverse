@@ -1,0 +1,3 @@
+Post-It-Erkennung:
+  - Post-It wird nur erkannt, wenn es parallel zur horizontalen/vertikalen Kamerachse liegt
+  - 
