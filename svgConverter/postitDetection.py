@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import os
 
 def detect_postit_and_draw(frame):
     # Convert the frame to HSV for better color detection
@@ -76,12 +77,14 @@ def detect_drawing(prev_frame, current_frame):
 
 def main():
     cap = cv2.VideoCapture(0)
-
-
     prev_frame = None
     drawing_detected = False
-    no_movement_counter = 0  # Counter for consecutive frames with no movement
-    movement_threshold = 10  # Number of consecutive no-movement frames to confirm drawing is done
+    no_movement_counter = 0
+    movement_threshold = 10
+
+    # Shared directory for communication
+    shared_dir = "shared/"
+    os.makedirs(shared_dir, exist_ok=True)
 
     while True:
         ret, frame = cap.read()
@@ -95,37 +98,35 @@ def main():
         cropped = detect_postit_and_draw(frame)
 
         if cropped is not None:
-            # Convert cropped Post-It note region to grayscale
             gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
             gray_cropped = cv2.GaussianBlur(gray_cropped, (11, 11), 0)
 
-            # Initialize previous frame for the cropped region
             if prev_frame is None:
                 prev_frame = gray_cropped
                 continue
 
-            # Detect drawing activity within the cropped Post-It region
             if detect_drawing(prev_frame, gray_cropped):
                 drawing_detected = True
-                no_movement_counter = 0  # Reset counter when movement is detected
+                no_movement_counter = 0
             else:
                 if drawing_detected:
                     no_movement_counter += 1
 
-            # Capture image if no movement is detected for the threshold
             if no_movement_counter >= movement_threshold:
                 print("Drawing completed! Capturing image...")
-                cv2.imwrite("detected_postit.png", cropped)
-                print("Cropped Post-It note saved as detected_postit.png")
+                output_path = os.path.join(shared_dir, "detected_postit.png")
+                cv2.imwrite(output_path, cropped)
+                print(f"Cropped Post-It note saved as {output_path}")
+
+                # Write the flag file to signal the JavaScript program
+                with open(os.path.join(shared_dir, "drawing_ready.txt"), "w") as flag_file:
+                    flag_file.write("New drawing is ready.\n")
+                print("Flag file created to signal SVG conversion.")
                 break
 
-            # Update the previous frame for the cropped region
             prev_frame = gray_cropped
 
-        # Show the video feed with the detected Post-It
         cv2.imshow("Webcam", frame)
-
-        # Press 'q' to quit
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
