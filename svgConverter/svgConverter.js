@@ -6,7 +6,7 @@ const { Potrace } = require('potrace');
 // Shared directory and file paths
 const sharedDir = "shared/";
 const inputImage = path.join(sharedDir, "detected_postit.png");
-const flagFile = path.join(sharedDir, "drawing_ready.txt");
+const flagFile = path.join(sharedDir, "ready_for_svg.txt");
 const processedImage = "output/processedtest0.png";
 const outputSvg = "output/outputtest0.svg";
 
