@@ -1,221 +1,133 @@
-# Paperverse
+# Post-It Note Detection and SVG Conversion
 
-## SVG Converter for Post-It Note Drawings
-> sngConverter.js
+This project combines two programs to enable real-time detection of a Post-It note, automatic image cropping, and conversion of the cropped image into an SVG file. The system operates smoothly without requiring restarts, allowing multiple drawings to be processed in one session.
 
-This JavaScript script processes an image of a Post-It note, adjusts its appearance, and converts it to an SVG file. It uses the `sharp` library for image processing and the `potrace` library for SVG conversion.
-
----
-
-### Features
-- Preprocesses an image by enhancing brightness, contrast, and desaturation.
-- Converts the processed image to an SVG using Potrace.
-- Outputs the processed image and SVG file to specified directories.
+The project consists of:
+1. **Python Program**: Detects a Post-It note, monitors for drawing activity, and saves the image when the drawing is complete.
+2. **JavaScript Program**: Automatically converts the saved Post-It image into an SVG file.
 
 ---
 
-### Requirements
+## **Python Program: Post-It Note Detection**
 
-#### Node.js and NPM
-- Ensure Node.js and NPM are installed on your system.
-- Install them from [Node.js official site](https://nodejs.org/).
+### **Description**
+The Python program detects a yellow Post-It note in a webcam feed. It checks for drawing activity on the note and saves a cropped image of the Post-It when drawing stops. The image is stored in a shared directory and a notification file is created to trigger the SVG conversion program.
 
-#### Install Dependencies
-Run the following command to install the required libraries:
+### **Requirements**
+Make sure the following libraries are installed:
+```bash
+pip install opencv-python numpy
+```
+
+### **How to Run**
+1. Ensure your webcam is connected.
+2. Place a yellow Post-It note in the camera's view.
+3. Run the Python script:
+   ```bash
+   python postitDetection.py
+   ```
+4. Start drawing on the Post-It. The program will automatically detect when you stop drawing and save the image.
+5. Press `c` to reset and allow for new drawings without restarting the program.
+6. Press `q` to quit the program.
+
+### **Key Features**
+- **Post-It Detection**: Automatically detects a yellow Post-It note and aligns it even if tilted.
+- **Drawing Detection**: Monitors drawing activity and saves the image only when movement stops.
+- **Shared Directory**: Saves the cropped image into a shared folder (`shared/`).
+- **Notification File**: Creates a text file `shared/ready_for_svg.txt` with the path of the new image for the SVG conversion program.
+
+### **File Structure**
+```
+project_root/
+├── shared/                    # Shared directory for images and notification files
+│   ├── detected_postit.png    # Cropped Post-It image
+│   └── ready_for_svg.txt      # Notification file for SVG conversion
+├── postit_detection.py        # Python program (Post-It detection)
+└── svg_converter.js           # JavaScript program (SVG conversion)
+```
+
+---
+
+## **JavaScript Program: SVG Conversion**
+
+### **Description**
+The JavaScript program watches the shared directory for new Post-It images. When a new image is detected, it processes the image to enhance its contrast and brightness, then converts it into an SVG file.
+
+### **Requirements**
+Make sure the following libraries are installed:
 ```bash
 npm install sharp potrace fs
 ```
 
----
+### **How to Run**
+1. Ensure Node.js is installed on your system.
+2. Run the JavaScript script:
+   ```bash
+   node svgConverter.js
+   ```
+3. The program will monitor the shared directory. When a new `detected_postit.png` appears, it will process the image and create an SVG.
 
-### How to Use
+### **Key Features**
+- **Automatic Detection**: Watches for new images in the shared folder.
+- **Image Preprocessing**: Enhances the image contrast, brightness, and removes saturation.
+- **SVG Conversion**: Converts the processed image into an SVG file using Potrace.
+- **File Management**: Saves the resulting SVG in the `shared/` directory.
 
-#### 1. Setup
-- Place your input image in the `input` folder and name it `detected_postit.png` (or modify the script to use your desired filename).
-- Create an `output` folder to store the processed image and SVG.
+### **How It Works**
+1. The Python script detects a Post-It note and saves the image to `shared/detected_postit.png`.
+2. It also creates `shared/ready_for_svg.txt` as a notification for the JavaScript program.
+3. The JavaScript script reads the notification file, processes the image, and converts it into `shared/output.svg`.
 
-#### 2. Run the Script
-Run the script using the following command:
-```bash
-node svgConverter.js
+### **File Structure**
 ```
 
-#### 3. Outputs
-- **Processed Image:** Saved as `processedtest0.png` in the `output` folder.
-- **SVG File:** Saved as `outputtest0.svg` in the `output` folder.
-
----
-
-### Script Workflow
-
-1. **Preprocessing the Image:**
-   - Converts the image to greyscale.
-   - Enhances brightness, maximizes contrast, and removes color saturation.
-   - Saves the processed image to the output directory.
-
-2. **SVG Conversion:**
-   - Uses the Potrace library to trace the processed image and generate an SVG.
-   - Saves the SVG to the output directory.
-
----
-
-### Customization
-
-#### Input and Output Paths
-Update these variables to use different filenames or directories:
-```javascript
-const inputImage = 'input/detected_postit.png';
-const processedImage = 'output/processedtest0.png';
-const outputSvg = 'output/outputtest0.svg';
+Paperverse/
+├── output/ 
+│   ├── output.svg                # Generated SVG file
+├── svgConverter/ 
+   ├── shared/                    # Shared directory for images and SVGs
+   │   ├── detected_postit.png    # Input image (saved by Python script)
+   │   ├── ready_for_svg.txt      # Notification file
+   ├── postit_detection.py        # Python program (Post-It detection)
+   └── svg_converter.js           # JavaScript program (SVG conversion)
 ```
 
-#### Image Processing Settings
-Modify the preprocessing parameters in the `sharp` pipeline:
-```javascript
-sharp(inputImage)
-    .greyscale()  // Converts image to greyscale
-    .modulate({ brightness: 1.7 })  // Adjust brightness (e.g., 1.7 = increase by 70%)
-    .normalise();  // Maximizes contrast
-```
+---
 
-#### SVG Conversion Settings
-Customize the Potrace settings:
-```javascript
-const trace = new Potrace({ ...options });
-```
-Refer to the Potrace library documentation for available options.
+## **Workflow**
+The two programs work together as follows:
+1. **Python Program**:
+   - Detects a Post-It note.
+   - Monitors for drawing activity.
+   - Saves the cropped image and creates a notification file.
+2. **JavaScript Program**:
+   - Reads the notification file.
+   - Converts the new image into an SVG.
+3. The workflow allows multiple images to be processed in a single session.
 
 ---
 
-### Troubleshooting
-
-1. **Input Image Not Found:**
-   - Ensure the input image exists in the specified directory and matches the filename.
-
-2. **Output Not Generated:**
-   - Check for errors during the script execution.
-   - Ensure the output directory exists and the script has write permissions.
-
-3. **SVG Conversion Fails:**
-   - Verify the processed image is correctly generated.
-   - Adjust the preprocessing parameters to improve image clarity.
+## **Run Both Programs**
+1. Start the Python program:
+   ```bash
+   python postit_detection.py
+   ```
+2. In a separate terminal, start the JavaScript program:
+   ```bash
+   node svg_converter.js
+   ```
+3. Begin drawing on the Post-It note. When you finish drawing, the SVG file will be generated automatically in the shared folder.
 
 ---
 
-### License
-This project is open-source and can be freely modified and distributed.
+## **Troubleshooting**
+- **Post-It Not Detected**: Adjust the HSV color range in `postit_detection.py` to better match your Post-It note.
+- **Low Image Resolution**: Ensure your webcam supports higher resolutions.
+- **SVG Not Generated**: Check that the notification file and `detected_postit.png` are being saved to the shared directory.
 
 ---
 
-### Additional Notes
-- **Dependencies:** Ensure you have the correct versions of `sharp` and `potrace` installed for compatibility with your Node.js version.
-- **Image Quality:** High-contrast and clear images produce better SVG results.
+## **Conclusion**
+This project integrates Python and JavaScript programs to create a seamless system for detecting a Post-It note, tracking drawings, and converting them into SVG files. It allows for continuous use without restarting the programs, making it efficient and user-friendly.
 
-
-
-
-
-
-
-### Post-It Note Drawing Detection and Cropping
-> postitDetection.py
-
-This Python script detects drawing activity on a Post-It note using a webcam and captures an image of the note after a slight delay. The program is designed to identify changes in the drawn area and save the cropped Post-It note as an image.
-
-#### Features
-
-Detects yellow Post-It notes in the webcam feed.
-
-Monitors for drawing activity on the detected Post-It note.
-
-Captures and crops the Post-It note region after detecting persistent drawing changes.
-
-Introduces a short delay to allow users to finish their drawing before capturing.
-
-#### Requirements
-
-Python 3.6 or later
-
-OpenCV library
-
-NumPy library
-
-##### Install Dependencies
-
-To install the required libraries, run:
-
-pip install opencv-python numpy
-
-#### How to Use
-
-##### 1. Setup
-
-Ensure your webcam is connected and working properly. Place a yellow Post-It note within the webcam’s view. Adjust lighting conditions for better detection of the note.
-
-##### 2. Run the Script
-
-Run the script using the following command:
-
-python postitDetection.py
-
-##### 3. Operating Instructions
-
-###### Starting the Script:
-
-The webcam feed will open in a new window titled "Webcam."
-
-Ensure a yellow Post-It note is visible in the webcam feed. A green rectangle will appear around the detected Post-It note.
-
-###### Drawing Detection:
-
-Begin drawing on the Post-It note. The program detects changes in the note's content.
-
-If drawing activity is detected, the program waits for a short delay (default is 2 seconds) to allow you to finish your drawing.
-
-###### Image Capture:
-
-After the delay, the program captures and saves the image of the Post-It note as detected_postit.png in the current working directory.
-
-###### Exiting the Program:
-
-To exit at any time, press the q key in the webcam feed window.
-
-#### Notes
-
-Post-It Note Color: This script is optimized for yellow Post-It notes. To use other colors, adjust the HSV color range in the detect_postit_and_draw function.
-
-Drawing Sensitivity: The script uses pixel changes to detect drawing activity. You can adjust the sensitivity by modifying the detect_drawing function's pixel threshold.
-
-Capture Delay: The default delay before capturing is 2 seconds. You can adjust this value by changing the capture_delay variable in the main() function.
-
-#### Troubleshooting
-
-Post-It Note Not Detected:
-
-Ensure the note is well-lit and the webcam can see it clearly.
-
-Adjust the HSV range in the script to better match the color of your Post-It note.
-
-Drawing Not Detected:
-
-Ensure the drawing is visible and the webcam can clearly capture the changes.
-
-Adjust the non_zero_pixels threshold in the detect_drawing function to make the detection more or less sensitive.
-
-No Image Saved:
-
-Ensure the drawing activity is persistent (detected over several frames) to trigger the capture.
-
-Check if the script has permission to write to the current working directory.
-
-#### Customization
-
-##### Change Post-It Note Color:
-Modify the lower_yellow and upper_yellow HSV values in the detect_postit_and_draw function to detect different colors.
-
-##### Adjust Drawing Sensitivity:
-Update the non_zero_pixels threshold in the detect_drawing function to fine-tune how much change is required to detect drawing.
-
-##### Delay Before Capture:
-Change the capture_delay variable in the main() function to adjust the time before the image is captured.
 
