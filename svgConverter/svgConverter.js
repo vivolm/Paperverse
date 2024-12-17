@@ -7,14 +7,14 @@ const { Potrace } = require('potrace');
 const sharedDir = "shared/";
 const inputImage = path.join(sharedDir, "detected_postit.png");
 const flagFile = path.join(sharedDir, "ready_for_svg.txt");
-const processedImage = "output/processedtest0.png";
-const outputSvg = "output/outputtest0.svg";
+ const processedImage = "../output/processedtest0.png";
+const outputSvg = "../output/outputtest0.svg";
 
 // Preprocess the image: max brightness, max contrast, and 0 saturation
 async function preprocessImage() {
     await sharp(inputImage)
         .greyscale()
-        .modulate({ brightness: 1.3 })
+        .modulate({ brightness: 1.8 })
         .normalise()
         .toFile(processedImage);
     console.log('Image preprocessing complete.');

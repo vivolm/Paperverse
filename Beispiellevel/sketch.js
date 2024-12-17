@@ -37,7 +37,7 @@ function setup() {
 
   resizeCanvas(windowWidth, windowHeight + 10);
 
-  loadSVG("./SVG/output.svg") // Replace with the path to your SVG file
+  loadSVG("../output/outputtest0.svg") // Replace with the path to your SVG file
     .then((simplifiedSvg) => {
       console.log("Simplified SVG Path:", simplifiedSvg);
       complexSVG = simplifiedSvg;
@@ -116,7 +116,7 @@ function loadSVG(url) {
             if (child instanceof paper.Path) {
               console.log("Original Path:", child);
               child.simplify(5);
-              console.log("Simplified Path:", simplifiedPath);
+              console.log("Simplified Path:", child);
               simplifiedGroup.addChild(child);
             } else if (child instanceof paper.CompoundPath) {
               console.log("Original CompoundPath:", child);
@@ -154,7 +154,7 @@ function mousePressed() {
   // noFill();
   // drawnVertices = []; // Reset the vertices for a new shape
   if (gameState === "runGame") {
-    drawnSVG = new PolygonFromSVG(world, { x: mouseX, y: mouseY, fromFile: "./SVG/Example.svg", scale: 0.7, color: "white" });
+    drawnSVG = new PolygonFromSVG(world, { x: mouseX, y: mouseY, fromPath: complexSVG[0], scale: 0.7, color: "white" });
     svgShapes.push(drawnSVG);
   }
 }
@@ -195,13 +195,13 @@ function windowResized() {
 // Creates the cliffs and makes sure that they are relative to the screen size
 function createCliffs(clear) {
   let cliffLeftDim = {
-    w: width / 2.5,
+    w: width / 2,
     h: height / 1 / 3,
   };
 
   let cliffRightDim = {
     w: width / 2.5,
-    h: height * 0.6,
+    h: height * 0.45,
   };
 
   if (clear) {
