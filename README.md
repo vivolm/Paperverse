@@ -38,12 +38,15 @@ pip install opencv-python numpy
 
 ### **File Structure**
 ```
-project_root/
-├── shared/                    # Shared directory for images and notification files
-│   ├── detected_postit.png    # Cropped Post-It image
-│   └── ready_for_svg.txt      # Notification file for SVG conversion
-├── postit_detection.py        # Python program (Post-It detection)
-└── svg_converter.js           # JavaScript program (SVG conversion)
+Paperverse/
+├── output/ 
+│   ├── output.svg                # Generated SVG file
+├── svgConverter/ 
+   ├── shared/                    # Shared directory for images and SVGs
+   │   ├── detected_postit.png    # Input image (saved by Python script)
+   │   ├── ready_for_svg.txt      # Notification file
+   ├── postit_detection.py        # Python program (Post-It detection)
+   └── svg_converter.js           # JavaScript program (SVG conversion)
 ```
 
 ---
