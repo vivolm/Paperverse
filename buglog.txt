@@ -1,4 +1,4 @@
 Post-It-Erkennung:
-  - Post-It wird nur erkannt, wenn es parallel zur horizontalen/vertikalen Kamerachse liegt
-  - Auflösung des aufgezeichneten Post-It ist zu niedrig (im Vergleich zum ersten Prototyp)
+  - Post-It wird nur erkannt, wenn es parallel zur horizontalen/vertikalen Kamerachse liegt -> solved
+  - Auflösung des aufgezeichneten Post-It ist zu niedrig (im Vergleich zum ersten Prototyp) -> solved
   - Aufzeichnung wird teilweise zu früh beendet (Licht? Drehung des Objekts? Gelbtöne? Es ist schon was auf dem Papier?)
