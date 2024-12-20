@@ -1,0 +1,1 @@
+shared_directory\detected_postit.png

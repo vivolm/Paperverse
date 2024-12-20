@@ -2,12 +2,22 @@ import cv2
 import numpy as np
 import os
 
-# Define shared directory and notification file paths
-SHARED_DIR = "shared"
-NOTIFICATION_FILE = os.path.join(SHARED_DIR, "ready_for_svg.txt")
+
+# Define the shared directory and notification file paths
+output_directory = "./shared"
+notification_file = os.path.join(output_directory, "ready_for_svg.txt")
 
 # Ensure the shared directory exists
-os.makedirs(SHARED_DIR, exist_ok=True)
+if not os.path.exists(output_directory):
+    os.makedirs(output_directory)
+
+def notify_svg_conversion(cropped_file):
+    """
+    Write a notification to the SVG conversion file indicating a new image is ready.
+    """
+    with open(notification_file, "w") as f:
+        f.write(cropped_file)
+    print(f"Notification written to {notification_file}")
 
 def detect_postit_and_draw(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -47,80 +57,125 @@ def detect_postit_and_draw(frame):
                 return warped
     return None
 
+def validate_postit_with_drawing(image):
+    """
+    Validate whether the captured image is a Post-It note with a drawing.
+    Returns True if valid, False otherwise.
+    """
+    # Convert to grayscale for processing
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Apply Canny Edge Detection
+    edges = cv2.Canny(gray, 50, 150)
+
+    # Count the number of edge pixels
+    edge_count = cv2.countNonZero(edges)
+
+    # Define thresholds for a valid drawing
+    min_edge_count = 500  # Adjust based on experimentation
+
+    # Check if the edge count exceeds the minimum threshold
+    if edge_count > min_edge_count:
+        return True
+    else:
+        print("Validation failed: No significant drawing detected.")
+        return False
+
+
 def detect_drawing(prev_frame, current_frame):
     diff = cv2.absdiff(prev_frame, current_frame)
     _, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
     non_zero_pixels = cv2.countNonZero(thresh)
     return non_zero_pixels > 1500
 
-def notify_svg_conversion(cropped_file):
-    with open(NOTIFICATION_FILE, "w") as f:
-        f.write(cropped_file)
-    print(f"Notification written to {NOTIFICATION_FILE}")
 
 def main():
     cap = cv2.VideoCapture(0)
+    prev_frame = None
+    drawing_detected = False
+    no_movement_counter = 0  # Counter for consecutive frames with no movement
+    movement_threshold = 10  # Number of consecutive no-movement frames to confirm drawing is done
+
+    notification_file = os.path.join(output_directory, "ready_for_svg.txt")
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
 
     while True:
-        prev_frame = None
-        drawing_detected = False
-        no_movement_counter = 0
-        movement_threshold = 10
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-        print("Ready to detect a new drawing...")
+        # Resize frame for faster processing
+        frame = cv2.resize(frame, (640, 480))
 
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
+        # Detect Post-It note and crop the region
+        cropped = detect_postit_and_draw(frame)
 
-            frame = cv2.resize(frame, (640, 480))
-            cropped = detect_postit_and_draw(frame)
+        if cropped is not None:
+            # Convert cropped Post-It note region to grayscale
+            gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+            gray_cropped = cv2.GaussianBlur(gray_cropped, (11, 11), 0)
 
-            if cropped is not None:
-                gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
-                gray_cropped = cv2.GaussianBlur(gray_cropped, (11, 11), 0)
-
-                if prev_frame is None:
-                    prev_frame = gray_cropped
-                    continue
-
-                if detect_drawing(prev_frame, gray_cropped):
-                    drawing_detected = True
-                    no_movement_counter = 0
-                else:
-                    if drawing_detected:
-                        no_movement_counter += 1
-
-                if no_movement_counter >= movement_threshold:
-                    print("Drawing completed! Capturing image...")
-                    cropped_file = os.path.join(SHARED_DIR, "detected_postit.png")
-                    cv2.imwrite(cropped_file, cropped)
-                    print(f"Cropped Post-It note saved as {cropped_file}")
-                    notify_svg_conversion(cropped_file)
-                    break
-
+            # Initialize previous frame for the cropped region
+            if prev_frame is None:
                 prev_frame = gray_cropped
+                continue
 
-            cv2.imshow("Webcam", frame)
+            # Detect drawing activity within the cropped Post-It region
+            if detect_drawing(prev_frame, gray_cropped):
+                drawing_detected = True
+                no_movement_counter = 0  # Reset counter when movement is detected
+            else:
+                if drawing_detected:
+                    no_movement_counter += 1
 
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord('q'):
-                cap.release()
-                cv2.destroyAllWindows()
-                return
+            # Capture image if no movement is detected for the threshold
+            if no_movement_counter >= movement_threshold:
+                print("Drawing completed! Validating image...")
+                if validate_postit_with_drawing(cropped):
+                    print("Validation passed. Saving image...")
+                    
+                    file_path = os.path.join(output_directory, f"detected_postit.png")
+                    cv2.imwrite(file_path, cropped)
+                    print(f"Cropped Post-It note saved as {file_path}")
 
-        print("Press 'c' to capture another drawing, or 'q' to quit.")
-        while True:
-            key = cv2.waitKey(1) & 0xFF
-            if key == ord('c'):
-                print("Starting new drawing session...")
-                break
-            elif key == ord('q'):
-                print("Exiting program.")
-                cap.release()
-                cv2.destroyAllWindows()
-                return
+                    # Notify SVG converter
+                    with open(notification_file, "w") as f:
+                        f.write(file_path)
+                    print(f"Notification written to {notification_file}")
+
+                    # Prompt user to continue or quit
+                    while True:
+                        print("Press 'c' to continue or 'q' to quit...")
+                        key = cv2.waitKey(0) & 0xFF
+                        if key == ord('c'):
+                            print("Continuing to next drawing...")
+                            drawing_detected = False
+                            no_movement_counter = 0  # Reset counters
+                            prev_frame = None  # Reset the previous frame
+                            break
+                        elif key == ord('q'):
+                            print("Exiting program.")
+                            cap.release()
+                            cv2.destroyAllWindows()
+                            return
+                else:
+                    print("Validation failed. Discarding image.")
+                    drawing_detected = False
+                    no_movement_counter = 0  # Reset counters
+
+            # Update the previous frame for the cropped region
+            prev_frame = gray_cropped
+
+        # Show the video feed with the detected Post-It
+        cv2.imshow("Webcam", frame)
+
+        # Press 'q' to quit directly from live feed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()

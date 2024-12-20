@@ -37,7 +37,7 @@ function setup() {
 
   resizeCanvas(windowWidth, windowHeight + 10);
 
-  loadSVG("../output/outputtest0.svg") // Replace with the path to your SVG file
+  loadSVG("../output/output.svg") // Replace with the path to your SVG file
     .then((simplifiedSvg) => {
       console.log("Simplified SVG Path:", simplifiedSvg);
       complexSVG = simplifiedSvg;
