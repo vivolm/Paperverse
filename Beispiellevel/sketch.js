@@ -55,7 +55,7 @@ function setup() {
 }
 
 function draw() {
-  background("skyblue");
+  background("red");
 
   backgroundImgs.forEach((x) => {
     image(x, 0, 0, width, height);
