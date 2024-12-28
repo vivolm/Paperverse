@@ -6,6 +6,11 @@ class PolygonFromSVG extends Block {
   }
 
   addBody() {
+    // set values for restitution calculation before constructing body
+    this.restitutionScale = 0.6; // 1 equals no scaling, anything below decreases the restitution
+    this.minMass = 1;
+    this.maxMass = 80;
+
     if (this.attributes.fromVertices) {
       // use list of vertices/points
       this.addBodyVertices(this.attributes.fromVertices);
@@ -55,6 +60,7 @@ class PolygonFromSVG extends Block {
         }
       }
     }
+    this.setRestitution();
   }
 
   addBodyVertices(vertices) {
@@ -96,5 +102,12 @@ class PolygonFromSVG extends Block {
       max.y = max.y < v.y ? v.y : max.y;
     });
     return { x: min.x + (this.body.position.x - this.body.bounds.min.x), y: min.y + (this.body.position.y - this.body.bounds.min.y) };
+  }
+
+  setRestitution() {
+    let mass = this.body.mass;
+    let clampedMass = Math.max(this.minMass, Math.min(mass, this.maxMass));
+    let restitution = (1 - (clampedMass - this.minMass) / (this.maxMass - this.minMass)) * Math.max(0, Math.min(this.restitutionScale, 1));
+    this.body.restitution = restitution;
   }
 }

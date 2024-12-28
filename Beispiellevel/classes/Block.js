@@ -1,6 +1,6 @@
 class Block extends BlockCore {
-  constructor(world, attributes, options) {
-    super(world, attributes, options);
+  constructor(world, attributes, options, drawPoint) {
+    super(world, attributes, options, drawPoint);
     this.collisions = [];
     this.constraints = [];
   }

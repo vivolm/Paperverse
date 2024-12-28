@@ -1,5 +1,5 @@
 class BlockCore {
-  constructor(world, attributes, options) {
+  constructor(world, attributes, options, drawPoint) {
     this.world = world;
     this.attributes = attributes;
     this.options = options || {};
@@ -7,17 +7,26 @@ class BlockCore {
     this.options.plugin.block = this;
     this.offset = this.attributes.offset || { x: 0, y: 0 };
     this.attributes.scale = this.attributes.scale || 1.0;
+    this.drawPoint = drawPoint || "CENTER";
+
     this.addBody();
     if (this.body) {
       Matter.Composite.add(this.world, this.body);
-      if (this.options.restitution) {
-        this.body.restitution = this.options.restitution;
-      }
     }
   }
 
   addBody() {
-    this.body = Matter.Bodies.rectangle(this.attributes.x, this.attributes.y, this.attributes.w, this.attributes.h, this.options);
+    if (this.drawPoint === "CORNER") {
+      let centerX = this.attributes.x + this.attributes.w / 2;
+      let centerY = this.attributes.y + this.attributes.h / 2;
+      this.body = Matter.Bodies.rectangle(centerX, centerY, this.attributes.w, this.attributes.h, this.options);
+    } else if (this.drawPoint === "CENTER") {
+      this.body = Matter.Bodies.rectangle(this.attributes.x, this.attributes.y, this.attributes.w, this.attributes.h, this.options);
+    }
+  }
+
+  removeBody() {
+    Composite.remove(this.world, this.body);
   }
 
   draw() {
