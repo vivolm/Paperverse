@@ -1,4 +1,4 @@
-// module aliases
+// matter.js module aliases
 const Engine = Matter.Engine,
   Runner = Matter.Runner,
   Bodies = Matter.Bodies,
@@ -11,35 +11,28 @@ const Engine = Matter.Engine,
 
 Matter.use("matter-wrap");
 
-let levelGeometry = [];
-let svgShapes = [];
-let drawableSVG;
-let debug = false;
+// global matter.js variables
 const engine = Engine.create();
 const world = engine.world;
 const runner = Runner.create();
 
-let winSensors = [];
-let failSensor;
+// global variables for tracking bodies & assets
+let drawBodies = [];
+let svgShapes = [];
+let drawableSVG;
 let drawnSVG;
-
-let svgFile = "./SVG/Example.svg";
-
-let gameState = "runGame";
-
 let backgroundImgs = [];
-
 let angryAnim;
 let characterBody;
-let animDim = {
-  width: 375,
-  height: 500,
-  frames: 11,
-};
-let canvasMouse;
+
+// global game logic
+let gameState = "runGame";
+let currentLevel = 0;
+
+// let canvasMouse;
 
 function preload() {
-  let mainBG = loadImage("./Assets/game_background_1.png", function (img) {
+  let level1BG = loadImage("./Assets/game_background_1.png", function (img) {
     backgroundImgs.push(img);
   });
 
@@ -67,7 +60,7 @@ function setup() {
   // Composite.add(world, mConstraint);
 
   // load the SVG and then simplify it
-  loadSVG(svgFile)
+  loadSVG("./SVG/output.svg")
     .then((simplifiedSVG) => {
       console.log("Simplified SVG Path:", simplifiedSVG);
       drawableSVG = simplifiedSVG;
@@ -78,9 +71,7 @@ function setup() {
 
   angryAnim.scale = 0.5;
 
-  // create left and right cliffs
-  createLevelGeometry();
-  createCharacter(angryAnim.scale);
+  createLevel(currentLevel);
 
   // run the engine
   Runner.run(runner, engine);
@@ -92,7 +83,7 @@ function draw() {
   });
 
   if (gameState == "runGame") {
-    levelGeometry.forEach((x) => {
+    drawBodies.forEach((x) => {
       x.draw();
     });
 
@@ -176,91 +167,121 @@ function keyPressed() {
   if (key === "d") {
     debug = !debug;
   }
-}
 
-function windowResized() {
-  resizeCanvas();
-  createLevelGeometry(true);
-}
-
-// Creates the cliffs and makes sure that they are relative to the screen size
-function createLevelGeometry(clear) {
-  let winSensorW = 100;
-  let winSensorH = 50;
-  let cliffLeftDim = {
-    w: width / 2,
-    h: height / 1 / 3,
-  };
-
-  let cliffRightDim = {
-    w: width / 2.5,
-    h: height / 1 / 3,
-  };
-
-  if (clear) {
-    const bodies = Composite.allBodies(world);
-    for (let body of bodies) {
-      if (body.label === "cliff" || body.label === "sensor") {
-        Composite.remove(world, body);
-        levelGeometry = [];
-      }
-    }
-  }
-
-  // create level geometry
-  cliffLeft = new Block(world, { x: cliffLeftDim.w / 2, y: height - cliffLeftDim.h / 2, w: cliffLeftDim.w, h: cliffLeftDim.h, color: "white" }, { isStatic: true, label: "cliff" });
-  cliffRight = new Block(world, { x: width - cliffRightDim.w / 2, y: height - cliffRightDim.h / 2, w: cliffRightDim.w, h: cliffRightDim.h, color: "white" }, { isStatic: true, label: "cliff" });
-
-  // create sensors to detect win/lose conditions
-  failSensor = new Block(
-    world,
-    { x: cliffLeft.attributes.x + cliffLeft.attributes.w / 2, y: height - 20, w: width - (cliffLeft.attributes.w + cliffRight.attributes.w), h: 50, color: "red" },
-    { isStatic: true, isSensor: true, label: "failSensor" },
-    "CORNER"
-  );
-
-  leftWinSensor = new Block(
-    world,
-    { x: cliffLeft.attributes.x + cliffLeft.attributes.w / 2 - winSensorW, y: cliffLeft.attributes.y - cliffLeft.attributes.h / 2 - winSensorH, w: winSensorW, h: winSensorH, color: "red" },
-    { isStatic: true, isSensor: true, label: "leftWinSensor" },
-    "CORNER"
-  );
-
-  rightWinSensor = new Block(
-    world,
-    { x: cliffRight.attributes.x - cliffRight.attributes.w / 2, y: cliffRight.attributes.y - cliffRight.attributes.h / 2 - winSensorH, w: winSensorW, h: winSensorH, color: "red" },
-    { isStatic: true, isSensor: true, label: "rightWinSensor" },
-    "CORNER"
-  );
-
-  winSensors.push(leftWinSensor.body, rightWinSensor.body);
-  levelGeometry.push(cliffLeft, cliffRight, failSensor, leftWinSensor, rightWinSensor);
-}
-
-function createCharacter(scale) {
-  characterBody = new Block(world, { x: cliffLeft.attributes.x, y: height / 2, w: angryAnim.width * scale, h: angryAnim.height * scale }, { restitution: 0.5, friction: 0.5 });
-}
-
-// check for win/lose conditions by detecting collisions
-Events.on(engine, "collisionStart", function (event) {
-  if (drawnSVG) {
-    // check if the drawn object spans across the gap
-    if (Query.collides(drawnSVG.body, winSensors).length == 2) {
-      console.log("Bridge has been built");
-      gameState = "win";
-    }
-
-    // check if the drawn object is too small for the gap
-    if (Collision.collides(drawnSVG.body, failSensor.body)) {
-      console.log("Object too small!");
-      gameState = "gameOver";
-    }
-  }
-});
-
-// reset the game to be running
-function keyPressed() {
   if (key === "r") {
     gameState = "runGame";
   }
 }
+
+function windowResized() {
+  resizeCanvas();
+  createLevel(currentLevel, clear);
+}
+
+function createLevel(levelIndex, clear) {
+  // set responsive dimensions of bodies seperately, so they can be accessed in level data
+  let levelDims = [
+    {
+      dimensions: [
+        { w: width / 2, h: height / 1 / 3 },
+        { w: width / 2.5, h: height / 1 / 3 },
+        { w: 100, h: 50 },
+      ],
+      character: { scale: 0.5 },
+    },
+  ];
+
+  // set up data for each level (position, etc.), each array item corresponds to a level
+  let levels = [
+    {
+      background: backgroundImgs[0],
+      geometry: [
+        { x: levelDims[0].dimensions[0].w / 2, y: height - levelDims[0].dimensions[0].h / 2, w: levelDims[0].dimensions[0].w, h: levelDims[0].dimensions[0].h },
+        { x: width - levelDims[0].dimensions[1].w / 2, y: height - levelDims[0].dimensions[1].h / 2, w: levelDims[0].dimensions[1].w, h: levelDims[0].dimensions[1].h },
+      ],
+      sensors: [
+        { x: levelDims[0].dimensions[0].w / 2 + levelDims[0].dimensions[0].w / 2, y: height - 20, w: width - (levelDims[0].dimensions[0].w + levelDims[0].dimensions[1].w), h: 100, type: "fail" },
+        {
+          x: levelDims[0].dimensions[0].w / 2 + levelDims[0].dimensions[0].w / 2 - levelDims[0].dimensions[2].w,
+          y: height - levelDims[0].dimensions[0].h / 2 - levelDims[0].dimensions[0].h / 2 - levelDims[0].dimensions[2].h,
+          w: levelDims[0].dimensions[2].w,
+          h: levelDims[0].dimensions[2].h,
+          type: "win",
+        },
+        {
+          x: width - levelDims[0].dimensions[1].w / 2 - levelDims[0].dimensions[1].w / 2,
+          y: height - levelDims[0].dimensions[1].h / 2 - levelDims[0].dimensions[1].h / 2 - levelDims[0].dimensions[2].h,
+          w: levelDims[0].dimensions[2].w,
+          h: levelDims[0].dimensions[2].h,
+          type: "win",
+        },
+      ],
+      char: { x: levelDims[0].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+    },
+  ];
+
+  // access the correct level data
+  level = levels[levelIndex];
+
+  // delete all previously created and drawn bodies (e.g. on window resize)
+  if (clear) {
+    const bodies = Composite.allBodies(world);
+    bodies.forEach((body) => {
+      Composite.remove(world, body);
+      drawBodies = [];
+    });
+  }
+
+  // create bodies (e.g. static/dynamic geo, sensors, characters)
+  level.geometry.forEach((geo) => {
+    let levelGeo = new Block(world, { x: geo.x, y: geo.y, w: geo.w, h: geo.h, color: "white" }, { isStatic: true });
+    drawBodies.push(levelGeo);
+  });
+
+  // create sensors (e.g. for collision detection)
+  level.sensors.forEach((sensor) => {
+    let levelSensor;
+    if (sensor.type === "fail") {
+      levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" }, { isStatic: true, isSensor: true, label: "failSensor" }, "CORNER");
+    } else if (sensor.type === "win") {
+      levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" }, { isStatic: true, isSensor: true, label: "winSensor" }, "CORNER");
+    }
+    drawBodies.push(levelSensor);
+  });
+
+  // create character
+  const char = level.char;
+  characterBody = new Block(world, { x: char.x, y: char.y, w: char.w, h: char.h }, { restitution: 0.5, friction: 0.5 });
+}
+
+// check for win/lose conditions by detecting collisions
+Events.on(engine, "collisionStart", function () {
+  if (drawnSVG && gameState === "runGame") {
+    let winSensors = [];
+    let failSensors = [];
+
+    const bodies = Composite.allBodies(world);
+    bodies.forEach((body) => {
+      if (body.label === "winSensor") {
+        winSensors.push(body);
+      } else if (body.label === "failSensor") {
+        failSensors.push(body);
+      }
+    });
+
+    // check win/lose conditions for respective level
+    if (currentLevel == 0) {
+      // check if the drawn object spans across the gap
+      if (Query.collides(drawnSVG.body, winSensors).length == 2) {
+        console.log("Bridge has been built");
+        gameState = "win";
+      }
+
+      // check if the drawn object is too small for the gap
+      if (Query.collides(drawnSVG.body, failSensors).length > 0) {
+        console.log("Object too small!");
+        gameState = "gameOver";
+      }
+    }
+  }
+});
