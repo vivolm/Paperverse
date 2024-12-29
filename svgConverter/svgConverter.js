@@ -5,21 +5,27 @@ const { Potrace } = require('potrace');
 
 // Shared directory and file paths
 const sharedDir = "shared/";
-const inputImage = path.join(sharedDir, "detected_postit.png");
 const flagFile = path.join(sharedDir, "ready_for_svg.txt");
- const processedImage = "../output/processed.png";
+const processedImage = "../output/processed.png";
 const outputSvg = "../output/output.svg";
 
-// Preprocess the image: max brightness, max contrast, and 0 saturation
-async function preprocessImage() {
+// Preprocess the image with different brightness based on color
+async function preprocessImage(inputImage, color) {
+    // Trim and normalize the color string
+    const normalizedColor = color.trim().toLowerCase();
+
+    let brightnessFactor = (normalizedColor === 'blue') ? 2.5 : 1.4;
+
+    console.log(`Detected ${normalizedColor} Post-it. Applying brightness: ${brightnessFactor}x`);
+
     await sharp(inputImage)
         .greyscale()
-        .modulate({ brightness: 1.3 })
+        .modulate({ brightness: brightnessFactor })
         .normalise()
         .toFile(processedImage);
+
     console.log('Image preprocessing complete.');
 }
-
 // Convert the processed image to SVG using Potrace
 function convertToSvg() {
     const trace = new Potrace();
@@ -30,7 +36,7 @@ function convertToSvg() {
     });
 }
 
-// Watch for the flag file
+// Watch for the flag file and handle processing
 function watchForDrawing() {
     console.log("Watching for new drawing...");
 
@@ -38,11 +44,24 @@ function watchForDrawing() {
         if (fs.existsSync(flagFile)) {
             console.log("New drawing detected! Starting SVG conversion...");
 
+            // Read the flag file content (image path and color)
+            const content = fs.readFileSync(flagFile, 'utf8').trim();
+            const [inputImage, color] = content.split(',');
+
+            if (!inputImage || !color) {
+                console.error("Invalid flag file format. Expected: 'path, color'");
+                return;
+            }
+
+            console.log(`Processing file: ${inputImage}, Color: ${color}`);
+
             // Remove the flag file to avoid duplicate processing
             fs.unlinkSync(flagFile);
 
             // Process the image and convert to SVG
-            preprocessImage().then(convertToSvg).catch(console.error);
+            preprocessImage(inputImage, color)
+                .then(convertToSvg)
+                .catch(console.error);
         }
     }, 1000); // Check every second
 

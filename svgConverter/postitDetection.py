@@ -11,51 +11,64 @@ notification_file = os.path.join(output_directory, "ready_for_svg.txt")
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-def notify_svg_conversion(cropped_file):
+def notify_svg_conversion(cropped_file, color):
     """
     Write a notification to the SVG conversion file indicating a new image is ready.
     """
     with open(notification_file, "w") as f:
-        f.write(cropped_file)
-    print(f"Notification written to {notification_file}")
+        f.write(f"{cropped_file}, {color}")
+    print(f"Notification written to {notification_file} - Color: {color}")
 
 def detect_postit_and_draw(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # Define HSV ranges for yellow and blue Post-its
     lower_yellow = np.array([20, 30, 70])
     upper_yellow = np.array([50, 255, 255])
-    mask = cv2.inRange(hsv, lower_yellow, upper_yellow)
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    for contour in contours:
-        if cv2.contourArea(contour) > 1000:
-            epsilon = 0.02 * cv2.arcLength(contour, True)
-            approx = cv2.approxPolyDP(contour, epsilon, True)
-            if len(approx) == 4:
-                pts = np.array([point[0] for point in approx], dtype='float32')
+    lower_blue = np.array([90, 50, 50])
+    upper_blue = np.array([130, 255, 255])
 
-                def order_points(pts):
-                    rect = np.zeros((4, 2), dtype='float32')
-                    s = pts.sum(axis=1)
-                    rect[0] = pts[np.argmin(s)]
-                    rect[2] = pts[np.argmax(s)]
-                    diff = np.diff(pts, axis=1)
-                    rect[1] = pts[np.argmin(diff)]
-                    rect[3] = pts[np.argmax(diff)]
-                    return rect
+    # Create masks for both colors
+    mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
+    mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
 
-                rect = order_points(pts)
-                width, height = 200, 200
-                dst = np.array([
-                    [0, 0],
-                    [width - 1, 0],
-                    [width - 1, height - 1],
-                    [0, height - 1]
-                ], dtype='float32')
-                M = cv2.getPerspectiveTransform(rect, dst)
-                warped = cv2.warpPerspective(frame, M, (width, height))
-                cv2.polylines(frame, [approx], True, (0, 255, 0), 2)
-                return warped
-    return None
+    # Process both masks separately
+    detected_color = None
+    for mask, color in zip([mask_yellow, mask_blue], ["yellow", "blue"]):
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        for contour in contours:
+            if cv2.contourArea(contour) > 1000:
+                epsilon = 0.02 * cv2.arcLength(contour, True)
+                approx = cv2.approxPolyDP(contour, epsilon, True)
+                if len(approx) == 4:
+                    pts = np.array([point[0] for point in approx], dtype='float32')
+
+                    def order_points(pts):
+                        rect = np.zeros((4, 2), dtype='float32')
+                        s = pts.sum(axis=1)
+                        rect[0] = pts[np.argmin(s)]
+                        rect[2] = pts[np.argmax(s)]
+                        diff = np.diff(pts, axis=1)
+                        rect[1] = pts[np.argmin(diff)]
+                        rect[3] = pts[np.argmax(diff)]
+                        return rect
+
+                    rect = order_points(pts)
+                    width, height = 200, 200
+                    dst = np.array([
+                        [0, 0],
+                        [width - 1, 0],
+                        [width - 1, height - 1],
+                        [0, height - 1]
+                    ], dtype='float32')
+                    M = cv2.getPerspectiveTransform(rect, dst)
+                    warped = cv2.warpPerspective(frame, M, (width, height))
+                    cv2.polylines(frame, [approx], True, (0, 255, 0), 2)
+                    detected_color = color
+                    return warped, detected_color
+    return None, None
 
 def validate_postit_with_drawing(image):
     """
@@ -93,43 +106,34 @@ def main():
     cap = cv2.VideoCapture(0)
     prev_frame = None
     drawing_detected = False
-    no_movement_counter = 0  # Counter for consecutive frames with no movement
-    movement_threshold = 10  # Number of consecutive no-movement frames to confirm drawing is done
-
-    notification_file = os.path.join(output_directory, "ready_for_svg.txt")
-    if not os.path.exists(output_directory):
-        os.makedirs(output_directory)
+    no_movement_counter = 0
+    movement_threshold = 10
 
     while True:
         ret, frame = cap.read()
         if not ret:
             break
 
-        # Resize frame for faster processing
         frame = cv2.resize(frame, (640, 480))
 
-        # Detect Post-It note and crop the region
-        cropped = detect_postit_and_draw(frame)
+        # Detect Post-it note and crop the region
+        cropped, detected_color = detect_postit_and_draw(frame)
 
         if cropped is not None:
-            # Convert cropped Post-It note region to grayscale
             gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
             gray_cropped = cv2.GaussianBlur(gray_cropped, (11, 11), 0)
 
-            # Initialize previous frame for the cropped region
             if prev_frame is None:
                 prev_frame = gray_cropped
                 continue
 
-            # Detect drawing activity within the cropped Post-It region
             if detect_drawing(prev_frame, gray_cropped):
                 drawing_detected = True
-                no_movement_counter = 0  # Reset counter when movement is detected
+                no_movement_counter = 0
             else:
                 if drawing_detected:
                     no_movement_counter += 1
 
-            # Capture image if no movement is detected for the threshold
             if no_movement_counter >= movement_threshold:
                 print("Drawing completed! Validating image...")
                 if validate_postit_with_drawing(cropped):
@@ -137,40 +141,32 @@ def main():
                     
                     file_path = os.path.join(output_directory, f"detected_postit.png")
                     cv2.imwrite(file_path, cropped)
-                    print(f"Cropped Post-It note saved as {file_path}")
+                    print(f"Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
 
                     # Notify SVG converter
-                    with open(notification_file, "w") as f:
-                        f.write(file_path)
-                    print(f"Notification written to {notification_file}")
+                    notify_svg_conversion(file_path, detected_color)
 
-                    # Prompt user to continue or quit
                     while True:
                         print("Press 'c' to continue or 'q' to quit...")
                         key = cv2.waitKey(0) & 0xFF
                         if key == ord('c'):
-                            print("Continuing to next drawing...")
                             drawing_detected = False
-                            no_movement_counter = 0  # Reset counters
-                            prev_frame = None  # Reset the previous frame
+                            no_movement_counter = 0
+                            prev_frame = None
                             break
                         elif key == ord('q'):
-                            print("Exiting program.")
                             cap.release()
                             cv2.destroyAllWindows()
                             return
                 else:
                     print("Validation failed. Discarding image.")
                     drawing_detected = False
-                    no_movement_counter = 0  # Reset counters
+                    no_movement_counter = 0
 
-            # Update the previous frame for the cropped region
             prev_frame = gray_cropped
 
-        # Show the video feed with the detected Post-It
         cv2.imshow("Webcam", frame)
 
-        # Press 'q' to quit directly from live feed
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
