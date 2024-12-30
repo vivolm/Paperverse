@@ -31,12 +31,12 @@ let rotationSpeed = 0.0001;
 
 // global game logic
 let gameState = "runGame";
-let currentLevel = 0;
+let currentLevel = 1;
 
 // let canvasMouse;
 
 function preload() {
-  let level1BG = loadImage("./Assets/game_background_1.png", function (img) {
+  loadImage("./Assets/level_1_background.jpg", function (img) {
     backgroundImgs.push(img);
   });
 
@@ -76,7 +76,7 @@ function setup() {
   angryAnim.scale = 0.5;
 
   createLevel(currentLevel);
-  spikeBall = new SpikedBall(world, { x: 1200, y: 300, r: 100, color: "white" }, { isStatic: true }, "CENTER");
+  // spikeBall = new SpikedBall(world, { x: 1200, y: 300, r: 100, color: "white", stroke: "black", weight: 2 }, { isStatic: true }, "CENTER");
 
   // run the engine
   Runner.run(runner, engine);
@@ -90,6 +90,10 @@ function draw() {
   if (gameState == "runGame") {
     drawBodies.forEach((x) => {
       x.draw();
+      if (x.options.label === "spikeBall") {
+        console.log("I am a spikey ball");
+        Body.rotate(x.body, radians(0.5));
+      }
     });
 
     svgShapes.forEach((x) => {
@@ -100,9 +104,7 @@ function draw() {
 
     animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
 
-    spikeBall.draw();
-
-    Body.rotate(spikeBall.body, radians(0.5));
+    // spikeBall.draw();
   }
 
   if (gameState === "gameOver") {
@@ -167,7 +169,7 @@ function mousePressed() {
       });
     }
     svgShapes = []; // remove old SVG bodies from drawing logic
-    drawnSVG = new PolygonFromSVG(world, { x: mouseX, y: mouseY, fromPath: drawableSVG[0], scale: 0.7, color: "white" }, { label: "drawnBody" });
+    drawnSVG = new PolygonFromSVG(world, { x: mouseX, y: mouseY, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 2 }, { label: "drawnBody" });
     svgShapes.push(drawnSVG);
   }
 }
@@ -188,15 +190,24 @@ function windowResized() {
 }
 
 function createLevel(levelIndex, clear) {
-  // set responsive dimensions of bodies seperately, so they can be accessed in level data
+  // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data
   let levelDims = [
+    {
+      character: { scale: 0.5 },
+    },
     {
       dimensions: [
         { w: width / 2, h: height / 1 / 3 },
         { w: width / 2.5, h: height / 1 / 3 },
         { w: 100, h: 50 },
       ],
-      character: { scale: 0.5 },
+    },
+    {
+      dimensions: [
+        { w: width / 2, h: height / 1 / 3 },
+        { w: width / 3.5, h: height / 1 / 3 },
+        { w: width, h: height / 1 / 5 },
+      ],
     },
   ];
 
@@ -204,28 +215,44 @@ function createLevel(levelIndex, clear) {
   let levels = [
     {
       background: backgroundImgs[0],
-      geometry: [
-        { x: levelDims[0].dimensions[0].w / 2, y: height - levelDims[0].dimensions[0].h / 2, w: levelDims[0].dimensions[0].w, h: levelDims[0].dimensions[0].h },
-        { x: width - levelDims[0].dimensions[1].w / 2, y: height - levelDims[0].dimensions[1].h / 2, w: levelDims[0].dimensions[1].w, h: levelDims[0].dimensions[1].h },
+      terrain: [
+        { x: levelDims[1].dimensions[0].w / 2, y: height - levelDims[1].dimensions[0].h / 2, w: levelDims[1].dimensions[0].w, h: levelDims[1].dimensions[0].h },
+        { x: width - levelDims[1].dimensions[1].w / 2, y: height - levelDims[1].dimensions[1].h / 2, w: levelDims[1].dimensions[1].w, h: levelDims[1].dimensions[1].h },
       ],
       sensors: [
-        { x: levelDims[0].dimensions[0].w / 2 + levelDims[0].dimensions[0].w / 2, y: height - 20, w: width - (levelDims[0].dimensions[0].w + levelDims[0].dimensions[1].w), h: 100, type: "fail" },
+        { x: levelDims[1].dimensions[0].w / 2 + levelDims[1].dimensions[0].w / 2, y: height - 20, w: width - (levelDims[1].dimensions[0].w + levelDims[1].dimensions[1].w), h: 100, type: "fail" },
         {
-          x: levelDims[0].dimensions[0].w / 2 + levelDims[0].dimensions[0].w / 2 - levelDims[0].dimensions[2].w,
-          y: height - levelDims[0].dimensions[0].h / 2 - levelDims[0].dimensions[0].h / 2 - levelDims[0].dimensions[2].h,
-          w: levelDims[0].dimensions[2].w,
-          h: levelDims[0].dimensions[2].h,
+          x: levelDims[1].dimensions[0].w / 2 + levelDims[1].dimensions[0].w / 2 - levelDims[1].dimensions[2].w,
+          y: height - levelDims[1].dimensions[0].h / 2 - levelDims[1].dimensions[0].h / 2 - levelDims[1].dimensions[2].h,
+          w: levelDims[1].dimensions[2].w,
+          h: levelDims[1].dimensions[2].h,
           type: "win",
         },
         {
-          x: width - levelDims[0].dimensions[1].w / 2 - levelDims[0].dimensions[1].w / 2,
-          y: height - levelDims[0].dimensions[1].h / 2 - levelDims[0].dimensions[1].h / 2 - levelDims[0].dimensions[2].h,
-          w: levelDims[0].dimensions[2].w,
-          h: levelDims[0].dimensions[2].h,
+          x: width - levelDims[1].dimensions[1].w / 2 - levelDims[1].dimensions[1].w / 2,
+          y: height - levelDims[1].dimensions[1].h / 2 - levelDims[1].dimensions[1].h / 2 - levelDims[1].dimensions[2].h,
+          w: levelDims[1].dimensions[2].w,
+          h: levelDims[1].dimensions[2].h,
           type: "win",
         },
       ],
-      char: { x: levelDims[0].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      char: { x: levelDims[1].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+    },
+    {
+      background: backgroundImgs[0],
+      terrain: [
+        { x: levelDims[2].dimensions[0].w / 2, y: levelDims[2].dimensions[0].h / 2, w: levelDims[2].dimensions[0].w, h: levelDims[2].dimensions[0].h },
+        { x: width - levelDims[2].dimensions[1].w / 2, y: levelDims[2].dimensions[1].h / 2, w: levelDims[2].dimensions[1].w, h: levelDims[2].dimensions[1].h },
+        { x: width / 2, y: height - levelDims[2].dimensions[2].h / 2, w: levelDims[2].dimensions[2].w, h: levelDims[2].dimensions[2].h },
+      ],
+      spikeBall: [
+        {
+          x: levelDims[2].dimensions[0].w + (width - levelDims[2].dimensions[0].w - levelDims[2].dimensions[1].w) / 2,
+          y: levelDims[2].dimensions[0].h,
+          r: ((width - levelDims[2].dimensions[0].w - levelDims[2].dimensions[1].w) / 2) * 0.7,
+        },
+      ],
+      char: { x: levelDims[1].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
     },
   ];
 
@@ -242,21 +269,32 @@ function createLevel(levelIndex, clear) {
   }
 
   // create bodies (e.g. static/dynamic geo, sensors, characters)
-  level.geometry.forEach((geo) => {
-    let levelGeo = new Block(world, { x: geo.x, y: geo.y, w: geo.w, h: geo.h, color: "white" }, { isStatic: true });
-    drawBodies.push(levelGeo);
-  });
+  if (level.terrain) {
+    level.terrain.forEach((geo) => {
+      let levelGeo = new Block(world, { x: geo.x, y: geo.y, w: geo.w, h: geo.h, color: "white", stroke: "black", weight: 2 }, { isStatic: true });
+      drawBodies.push(levelGeo);
+    });
+  }
 
   // create sensors (e.g. for collision detection)
-  level.sensors.forEach((sensor) => {
-    let levelSensor;
-    if (sensor.type === "fail") {
-      levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" }, { isStatic: true, isSensor: true, label: "failSensor" }, "CORNER");
-    } else if (sensor.type === "win") {
-      levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" }, { isStatic: true, isSensor: true, label: "winSensor" }, "CORNER");
-    }
-    drawBodies.push(levelSensor);
-  });
+  if (level.sensors) {
+    level.sensors.forEach((sensor) => {
+      let levelSensor;
+      if (sensor.type === "fail") {
+        levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h }, { isStatic: true, isSensor: true, label: "failSensor" }, "CORNER");
+      } else if (sensor.type === "win") {
+        levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h }, { isStatic: true, isSensor: true, label: "winSensor" }, "CORNER");
+      }
+      drawBodies.push(levelSensor);
+    });
+  }
+
+  if (level.spikeBall) {
+    level.spikeBall.forEach((spikey) => {
+      let spikeBall = new SpikedBall(world, { x: spikey.x, y: spikey.y, r: spikey.r, color: "white", stroke: "black", weight: 2 }, { isStatic: true, label: "spikeBall" });
+      drawBodies.push(spikeBall);
+    });
+  }
 
   // create character
   const char = level.char;

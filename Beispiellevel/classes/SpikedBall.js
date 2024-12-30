@@ -21,8 +21,8 @@ class SpikedBall extends Ball {
     const spikeAngle = (Math.PI * 2) / spikeCount;
 
     // Define spike dimensions based on the circle's radius
-    const spikeLength = this.attributes.r * 0.6; // Length of the spike (1.5 times the radius)
-    const spikeWidth = this.attributes.r * 0.2; // Width of the spike (10% of the radius)
+    const spikeLength = this.attributes.r * 0.6; // Length of the spike
+    const spikeWidth = this.attributes.r * 0.2; // Width of the spike
 
     for (let i = 0; i < spikeCount; i++) {
       const angle = spikeAngle * i;
@@ -68,7 +68,7 @@ class SpikedBall extends Ball {
 
   drawSpikes() {
     stroke(255, 0, 0); // Color for spikes
-    fill(255, 0, 0); // Fill color for spikes
+    // fill(255, 0, 0); // Fill color for spikes
     for (const spike of this.spikes) {
       const { vertices } = spike; // Get the vertices of the spike
 
