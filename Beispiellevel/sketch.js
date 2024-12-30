@@ -2,6 +2,7 @@
 const Engine = Matter.Engine,
   Runner = Matter.Runner,
   Bodies = Matter.Bodies,
+  Body = Matter.Body,
   Composite = Matter.Composite,
   Events = Matter.Events,
   Common = Matter.Common,
@@ -24,6 +25,9 @@ let drawnSVG;
 let backgroundImgs = [];
 let angryAnim;
 let characterBody;
+let spikeBall;
+let angle = 0;
+let rotationSpeed = 0.0001;
 
 // global game logic
 let gameState = "runGame";
@@ -72,6 +76,7 @@ function setup() {
   angryAnim.scale = 0.5;
 
   createLevel(currentLevel);
+  spikeBall = new SpikedBall(world, { x: 1200, y: 300, r: 100, color: "white" }, { isStatic: true }, "CENTER");
 
   // run the engine
   Runner.run(runner, engine);
@@ -94,6 +99,10 @@ function draw() {
     characterBody.draw();
 
     animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+
+    spikeBall.draw();
+
+    Body.rotate(spikeBall.body, radians(0.5));
   }
 
   if (gameState === "gameOver") {
