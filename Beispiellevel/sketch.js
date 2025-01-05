@@ -26,21 +26,21 @@ let backgroundImgs = [];
 let angryAnim;
 let characterBody;
 let spikeBall;
-let angle = 0;
 let rotationSpeed = 0.0001;
+let isRotating = true;
 
 // global game logic
 let gameState = "runGame";
-let currentLevel = 3;
-let isRotating = true;
-
-// let canvasMouse;
+let currentLevel = 1;
+let finalLevel = 5;
 
 function preload() {
+  // load each background and push it to the backgrounds array
   loadImage("./Assets/level_1_background.jpg", function (img) {
     backgroundImgs.push(img);
   });
 
+  // load each animation
   angryAnim = loadAni("./Assets/Spritesheet.png", {
     width: 375,
     height: 500,
@@ -58,68 +58,71 @@ function setup() {
 
   resizeCanvas(windowWidth, windowHeight + 10);
 
-  // setup mouse control for debugging purposes
-  // canvasMouse = Matter.Mouse.create(canvas.elt);
-  // canvasMouse.pixelRatio = pixelDensity();
-  // mConstraint = MouseConstraint.create(engine, { mouse: canvasMouse, stiffness: 0.2 });
-  // Composite.add(world, mConstraint);
-
   // load the SVG and then simplify it
   loadSVG("./SVG/output.svg")
     .then((simplifiedSVG) => {
-      console.log("Simplified SVG Path:", simplifiedSVG);
       drawableSVG = simplifiedSVG;
     })
     .catch((error) => {
       console.error(error);
     });
 
+  // scale down the animation asset
   angryAnim.scale = 0.5;
 
   createLevel(currentLevel);
-  // spikeBall = new SpikedBall(world, { x: 1200, y: 300, r: 100, color: "white", stroke: "black", weight: 2 }, { isStatic: true }, "CENTER");
 
-  // run the engine
+  // run the physics engine
   Runner.run(runner, engine);
 }
 
 function draw() {
+  // draw all background images NOTE: replace this code as soon as different levels use different background
   backgroundImgs.forEach((x) => {
     image(x, 0, 0, width, height);
   });
 
   if (gameState == "runGame") {
+    // draw all bodies and perform special functions (like rotation)
     drawBodies.forEach((x) => {
       x.draw();
       if (x.options.label === "spikeBall") {
         if (isRotating) {
-          console.log("Ball is rotating");
           Body.rotate(x.body, radians(0.5));
-        } else {
-          console.log("Ball is stopped");
         }
       }
     });
 
+    // draw the handdrawn svg shape
     svgShapes.forEach((x) => {
       x.draw();
     });
 
+    // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
     if (characterBody) {
       characterBody.draw();
-
       animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
     }
 
-    // spikeBall.draw();
+    // draw post-it placement hint NOTE: Add svg body condition
+    if (currentLevel == 1) {
+      push();
+      rectMode(CENTER);
+      stroke(247, 54, 0);
+      strokeWeight(3);
+      noFill();
+      drawingContext.setLineDash([5, 5]);
+      rect(width / 2, height / 4, 200, 200);
+      pop();
+    }
   }
 
-  if (gameState === "gameOver") {
-    text("GAME OVER", width / 2, height / 2);
+  if (gameState === "failure") {
+    // play disappointed char anim here
   }
 
   if (gameState === "win") {
-    text("WIN", width / 2, height / 2);
+    // play happy char anim here
   }
 }
 
@@ -131,27 +134,26 @@ function loadSVG(url) {
         if (item) {
           // Create a new group to hold the simplified paths
           const simplifiedGroup = new paper.Group();
+          const simplifyStrength = 5;
 
           // Process the loaded SVG item
           item.children.forEach((child) => {
+            // simplify logic for different types of paper.js objects (path, compound, shape)
             if (child instanceof paper.Path) {
-              console.log("Original Path:", child);
-              child.simplify(5);
-              console.log("Simplified Path:", child);
+              child.simplify(simplifyStrength);
               simplifiedGroup.addChild(child);
             } else if (child instanceof paper.CompoundPath) {
-              console.log("Original CompoundPath:", child);
-              child.simplify(5);
-              console.log("Simplified CompoundPath:", child);
+              child.simplify(simplifyStrength);
               simplifiedGroup.addChild(child);
             } else if (child instanceof paper.Shape) {
               console.log("Shape object ignored");
             }
           });
 
-          // Export the simplified group back to SVG
+          // Export the simplified group back to an SVG string
           const svgString = simplifiedGroup.exportSVG({ asString: true });
 
+          // turn that string into a DOM element
           const parser = new DOMParser();
           const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
           const paths = svgDoc.getElementsByTagName("path");
@@ -179,17 +181,56 @@ function mousePressed() {
   //   drawnSVG = new PolygonFromSVG(world, { x: mouseX, y: mouseY, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 2 }, { label: "drawnBody" });
   //   svgShapes.push(drawnSVG);
   // }
-  let testBlock = new Block(world, { x: mouseX, y: mouseY, w: 100, h: 100, color: "white", stroke: "black", weight: 2 }, { isStatic: false, mass: 100, label: "test" });
-  drawBodies.push(testBlock);
+
+  getDrawPosition().then((pos) => {
+    let testBlock;
+    let levelBodies = Composite.allBodies(world);
+    console.log(levelBodies);
+    pos.x = map(pos.x, 0, 1, 0, width);
+    pos.y = map(pos.y, 0, 1, 0, height);
+    if (pos.color === "yellow") {
+      testBlock = new Block(world, { x: mouseX, y: mouseY, w: 100, h: 100, color: "white", stroke: "black", weight: 2 }, { isStatic: false, mass: 100, label: "test" });
+    } else if (pos.color === "blue") {
+      testBlock = new Block(world, { x: mouseX, y: mouseY, w: 100, h: 100, color: "white", stroke: "black", weight: 2 }, { isStatic: true, mass: 100, label: "test" });
+    }
+    if (Query.collides(testBlock.body, levelBodies).length > 0) {
+      console.log("collision of drawn body with level geometry");
+      testBlock.removeBody(world, testBlock);
+    } else {
+      drawBodies.push(testBlock);
+    }
+  });
+}
+
+async function getDrawPosition() {
+  let position_color = {
+    x: 0,
+    y: 0,
+    color: "",
+  };
+
+  // get the json file and return the positional and color values
+  try {
+    const response = await fetch("../output/position_color.json");
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+    const data = await response.json();
+
+    position_color.x = data.relative_position.x;
+    position_color.y = data.relative_position.y;
+    position_color.color = data.color;
+    return position_color; // Return the position/color object
+  } catch (error) {
+    console.error("There was a problem with the fetch operation:", error);
+  }
 }
 
 function keyPressed() {
-  if (key === "d") {
-    debug = !debug;
-  }
-
-  if (key === "r") {
-    gameState = "runGame";
+  // change the current level on key press
+  if (key >= 1 && key <= finalLevel) {
+    createLevel(key, true);
+    currentLevel = key;
   }
 }
 
@@ -199,6 +240,11 @@ function windowResized() {
 }
 
 function createLevel(levelIndex, clear) {
+  // delete all previously created and drawn bodies (e.g. on window resize, level change)
+  if (clear) {
+    Matter.Composite.clear(world);
+    drawBodies = [];
+  }
   // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data
   let levelDims = [
     {
@@ -206,7 +252,21 @@ function createLevel(levelIndex, clear) {
     },
     {
       dimensions: [
-        // level 1
+        //tutorial 1
+        { w: width, h: height / 1 / 5 },
+      ],
+    },
+    {
+      dimensions: [
+        // tutorial 2
+        { w: width, h: height / 1 / 5 },
+        { w: width / 6, h: height / 12 },
+        { w: width / 10, h: height / 14 },
+      ],
+    },
+    {
+      dimensions: [
+        // level 1 bridge
         { w: width / 2, h: height / 1 / 3 },
         { w: width / 2.5, h: height / 1 / 3 },
         { w: 100, h: 50 },
@@ -214,7 +274,7 @@ function createLevel(levelIndex, clear) {
     },
     {
       dimensions: [
-        // level 2
+        // level 2 ball
         { w: width / 2, h: height / 1 / 3 },
         { w: width / 3.5, h: height / 1 / 3 },
         { w: width, h: height / 1 / 5 },
@@ -222,17 +282,9 @@ function createLevel(levelIndex, clear) {
     },
     {
       dimensions: [
-        // level 3
+        // level 3 button
         { w: width / 8, h: height },
         { w: width / 4, h: height / 1 / 5 },
-      ],
-    },
-    {
-      dimensions: [
-        // tutorial
-        { w: width, h: height / 1 / 5 },
-        { w: width / 6, h: height / 12 },
-        { w: width / 10, h: height / 14 },
       ],
     },
   ];
@@ -240,90 +292,87 @@ function createLevel(levelIndex, clear) {
   // set up data for each level (position, etc.), each array item corresponds to a level
   let levels = [
     {
-      // bridge level 0
+      // tutorial 1
       background: backgroundImgs[0],
-      terrain: [
-        { x: levelDims[1].dimensions[0].w / 2, y: height - levelDims[1].dimensions[0].h / 2, w: levelDims[1].dimensions[0].w, h: levelDims[1].dimensions[0].h },
-        { x: width - levelDims[1].dimensions[1].w / 2, y: height - levelDims[1].dimensions[1].h / 2, w: levelDims[1].dimensions[1].w, h: levelDims[1].dimensions[1].h },
-      ],
-      sensors: [
-        { x: levelDims[1].dimensions[0].w / 2 + levelDims[1].dimensions[0].w / 2, y: height - 20, w: width - (levelDims[1].dimensions[0].w + levelDims[1].dimensions[1].w), h: 100, type: "fail" },
-        {
-          x: levelDims[1].dimensions[0].w / 2 + levelDims[1].dimensions[0].w / 2 - levelDims[1].dimensions[2].w,
-          y: height - levelDims[1].dimensions[0].h / 2 - levelDims[1].dimensions[0].h / 2 - levelDims[1].dimensions[2].h,
-          w: levelDims[1].dimensions[2].w,
-          h: levelDims[1].dimensions[2].h,
-          type: "win",
-        },
-        {
-          x: width - levelDims[1].dimensions[1].w / 2 - levelDims[1].dimensions[1].w / 2,
-          y: height - levelDims[1].dimensions[1].h / 2 - levelDims[1].dimensions[1].h / 2 - levelDims[1].dimensions[2].h,
-          w: levelDims[1].dimensions[2].w,
-          h: levelDims[1].dimensions[2].h,
-          type: "win",
-        },
-      ],
-      char: { x: levelDims[1].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      terrain: [{ x: levelDims[1].dimensions[0].w / 2, y: height - levelDims[1].dimensions[0].h / 2, w: levelDims[1].dimensions[0].w, h: levelDims[1].dimensions[0].h }],
     },
     {
-      // spike ball level 1
+      // tutorial 2
       background: backgroundImgs[0],
-      terrain: [
-        { x: levelDims[2].dimensions[0].w / 2, y: levelDims[2].dimensions[0].h / 2, w: levelDims[2].dimensions[0].w, h: levelDims[2].dimensions[0].h },
-        { x: width - levelDims[2].dimensions[1].w / 2, y: levelDims[2].dimensions[1].h / 2, w: levelDims[2].dimensions[1].w, h: levelDims[2].dimensions[1].h },
-        { x: width / 2, y: height - levelDims[2].dimensions[2].h / 2, w: levelDims[2].dimensions[2].w, h: levelDims[2].dimensions[2].h },
-      ],
-      spikeBall: [
-        {
-          x: levelDims[2].dimensions[0].w + (width - levelDims[2].dimensions[0].w - levelDims[2].dimensions[1].w) / 2,
-          y: levelDims[2].dimensions[0].h,
-          r: ((width - levelDims[2].dimensions[0].w - levelDims[2].dimensions[1].w) / 2) * 0.7,
-        },
-      ],
-      char: { x: levelDims[1].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
-    },
-    {
-      // trampoline level 2
-      background: backgroundImgs[0],
-      terrain: [
-        { x: width - levelDims[3].dimensions[0].w / 2, y: levelDims[3].dimensions[0].h / 2, w: levelDims[3].dimensions[0].w, h: levelDims[3].dimensions[0].h },
-        { x: levelDims[3].dimensions[1].w / 2, y: height - levelDims[3].dimensions[1].h / 2, w: levelDims[3].dimensions[1].w, h: levelDims[3].dimensions[1].h },
-      ],
-    },
-    {
-      // tutorial level 3
-      background: backgroundImgs[0],
-      terrain: [{ x: levelDims[4].dimensions[0].w / 2, y: height - levelDims[4].dimensions[0].h / 2, w: levelDims[4].dimensions[0].w, h: levelDims[4].dimensions[0].h }],
+      terrain: [{ x: levelDims[2].dimensions[0].w / 2, y: height - levelDims[2].dimensions[0].h / 2, w: levelDims[2].dimensions[0].w, h: levelDims[2].dimensions[0].h }],
       button: [
         {
-          x: levelDims[4].dimensions[0].w / 2,
-          y: height - levelDims[4].dimensions[0].h - levelDims[4].dimensions[1].h / 2,
-          w: levelDims[4].dimensions[1].w,
-          h: levelDims[4].dimensions[1].h,
+          x: levelDims[2].dimensions[0].w / 2,
+          y: height - levelDims[2].dimensions[0].h - levelDims[2].dimensions[1].h / 2,
+          w: levelDims[2].dimensions[1].w,
+          h: levelDims[2].dimensions[1].h,
           type: "base",
         },
         {
-          x: levelDims[4].dimensions[0].w / 2,
-          y: height - levelDims[4].dimensions[0].h - levelDims[4].dimensions[1].h - levelDims[4].dimensions[2].h / 2,
-          w: levelDims[4].dimensions[2].w,
-          h: levelDims[4].dimensions[2].h,
+          x: levelDims[2].dimensions[0].w / 2,
+          y: height - levelDims[2].dimensions[0].h - levelDims[2].dimensions[1].h - levelDims[2].dimensions[2].h / 2,
+          w: levelDims[2].dimensions[2].w,
+          h: levelDims[2].dimensions[2].h,
           type: "button",
         },
       ],
     },
+    {
+      // level 1 bridge
+      background: backgroundImgs[0],
+      terrain: [
+        { x: levelDims[3].dimensions[0].w / 2, y: height - levelDims[3].dimensions[0].h / 2, w: levelDims[3].dimensions[0].w, h: levelDims[3].dimensions[0].h },
+        { x: width - levelDims[3].dimensions[1].w / 2, y: height - levelDims[3].dimensions[1].h / 2, w: levelDims[3].dimensions[1].w, h: levelDims[3].dimensions[1].h },
+      ],
+      sensors: [
+        { x: levelDims[3].dimensions[0].w / 2 + levelDims[3].dimensions[0].w / 2, y: height - 20, w: width - (levelDims[3].dimensions[0].w + levelDims[3].dimensions[1].w), h: 100, type: "fail" },
+        {
+          x: levelDims[3].dimensions[0].w / 2 + levelDims[3].dimensions[0].w / 2 - levelDims[3].dimensions[2].w,
+          y: height - levelDims[1].dimensions[0].h / 2 - levelDims[3].dimensions[0].h / 2 - levelDims[3].dimensions[2].h,
+          w: levelDims[3].dimensions[2].w,
+          h: levelDims[3].dimensions[2].h,
+          type: "win",
+        },
+        {
+          x: width - levelDims[3].dimensions[1].w / 2 - levelDims[3].dimensions[1].w / 2,
+          y: height - levelDims[3].dimensions[1].h / 2 - levelDims[3].dimensions[1].h / 2 - levelDims[3].dimensions[2].h,
+          w: levelDims[3].dimensions[2].w,
+          h: levelDims[3].dimensions[2].h,
+          type: "win",
+        },
+      ],
+      char: { x: levelDims[3].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+    },
+    {
+      // level 2 ball
+      background: backgroundImgs[0],
+      terrain: [
+        { x: levelDims[4].dimensions[0].w / 2, y: levelDims[4].dimensions[0].h / 2, w: levelDims[4].dimensions[0].w, h: levelDims[4].dimensions[0].h },
+        { x: width - levelDims[4].dimensions[1].w / 2, y: levelDims[4].dimensions[1].h / 2, w: levelDims[4].dimensions[1].w, h: levelDims[4].dimensions[1].h },
+        { x: width / 2, y: height - levelDims[4].dimensions[2].h / 2, w: levelDims[4].dimensions[2].w, h: levelDims[4].dimensions[2].h },
+      ],
+      spikeBall: [
+        {
+          x: levelDims[4].dimensions[0].w + (width - levelDims[4].dimensions[0].w - levelDims[4].dimensions[1].w) / 2,
+          y: levelDims[4].dimensions[0].h,
+          r: ((width - levelDims[4].dimensions[0].w - levelDims[4].dimensions[1].w) / 2) * 0.7,
+        },
+      ],
+      char: { x: levelDims[4].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+    },
+    {
+      // level 3 button
+      background: backgroundImgs[0],
+      terrain: [
+        { x: width - levelDims[5].dimensions[0].w / 2, y: levelDims[5].dimensions[0].h / 2, w: levelDims[5].dimensions[0].w, h: levelDims[5].dimensions[0].h },
+        { x: levelDims[5].dimensions[1].w / 2, y: height - levelDims[5].dimensions[1].h / 2, w: levelDims[5].dimensions[1].w, h: levelDims[5].dimensions[1].h },
+      ],
+    },
   ];
 
-  // access the correct level data
+  // access the correct level data (-1 so key inputs start at 1 instead of 0)
+  levelIndex = levelIndex - 1;
   level = levels[levelIndex];
-
-  // delete all previously created and drawn bodies (e.g. on window resize)
-  if (clear) {
-    const bodies = Composite.allBodies(world);
-    bodies.forEach((body) => {
-      Composite.remove(world, body);
-      drawBodies = [];
-    });
-  }
 
   // create bodies (e.g. static/dynamic geo, sensors, characters)
   if (level.terrain) {
@@ -354,6 +403,7 @@ function createLevel(levelIndex, clear) {
     });
   }
 
+  // create button
   if (level.button) {
     level.button.forEach((button) => {
       let buttonBlock;
@@ -379,8 +429,8 @@ Events.on(engine, "collisionStart", function (event) {
   if (gameState === "runGame") {
     const pairs = event.pairs;
 
-    // check win/lose conditions for respective level
-    if (currentLevel == 0) {
+    // check win/lose conditions for bridge level
+    if (currentLevel == 3) {
       let winSensors = [];
       let failSensors = [];
 
@@ -402,9 +452,10 @@ Events.on(engine, "collisionStart", function (event) {
       // check if the drawn object is too small for the gap
       if (Query.collides(drawnSVG.body, failSensors).length > 0) {
         console.log("Object too small!");
-        gameState = "gameOver";
+        gameState = "failure";
       }
-    } else if (currentLevel == 1) {
+    } else if (currentLevel == 4) {
+      // ball level
       let terrain = [];
       let testBlock;
       const bodies = Composite.allBodies(world);
@@ -426,7 +477,8 @@ Events.on(engine, "collisionStart", function (event) {
           }
         });
       }
-    } else if (currentLevel == 3) {
+    } else if (currentLevel == 2 || currentLevel == 5) {
+      // tutorial and puzzle button level
       const massThreshold = 10;
       const velocityThreshold = 10;
 
@@ -436,8 +488,6 @@ Events.on(engine, "collisionStart", function (event) {
         // Determine which body is the button and which is the colliding body
         const buttonBody = bodyA.label === "button" ? bodyA : bodyB.label === "button" ? bodyB : null;
         const collidingBody = buttonBody === bodyA ? bodyB : bodyA;
-
-        console.log(collidingBody);
 
         // Check if the colliding body has the required mass and velocity
         if (buttonBody && collidingBody) {
