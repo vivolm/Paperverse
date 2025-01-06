@@ -22,6 +22,7 @@ async function preprocessImage() {
 
 // Convert the processed image to SVG using Potrace
 function convertToSvg() {
+    copyJsonFile();
     const trace = new Potrace();
     trace.loadImage(processedImage, function (err) {
         if (err) throw err;
@@ -29,6 +30,22 @@ function convertToSvg() {
         console.log(`SVG saved as ${outputSvg}`);
     });
 }
+
+function copyJsonFile() {
+
+    let source = './shared/position_color.json';
+    let destination = '../output/position_color.json';
+
+    try {
+      fs.copyFileSync(source, destination);
+      console.log(`File copied from ${source} to ${destination}`);
+    } catch (error) {
+      console.error('Error copying file:', error);
+    }
+  }
+  
+  
+  
 
 // Watch for the flag file
 function watchForDrawing() {

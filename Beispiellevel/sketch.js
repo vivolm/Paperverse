@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 // matter.js module aliases
 const Engine = Matter.Engine,
   Runner = Matter.Runner,
