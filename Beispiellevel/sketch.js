@@ -23,11 +23,19 @@ let svgShapes = [];
 let drawableSVG;
 let drawnSVG;
 let backgroundImgs = [];
-let angryAnim;
 let characterBody;
 let spikeBall;
 let rotationSpeed = 0.0001;
 let isRotating = true;
+//Anim Var
+let angryAnim;
+let idleAnim;
+let loseAnim;
+let noteAnim;
+let thinkAnim;
+let waitAnim;
+let winAnim;
+
 
 // global game logic
 let gameState = "runGame";
@@ -35,17 +43,19 @@ let currentLevel = 1;
 let finalLevel = 5;
 
 function preload() {
-  // load each background and push it to the backgrounds array
+  // load each background and push it to the backgrounds array (backgroundImgs)
   loadImage("./Assets/level_1_background.jpg", function (img) {
     backgroundImgs.push(img);
   });
 
   // load each animation
-  angryAnim = loadAni("./Assets/Spritesheet.png", {
-    width: 375,
-    height: 500,
-    frames: 11,
-  });
+  angryAnim = loadAni("./Assets/Sprite_Angry.png", {width: 175, height: 248, frames: 11});
+  idleAnim = loadAni("./Assets/Sprite_Idle.png", {width: 175, height: 248, frames: 18});
+  loseAnim = loadAni("./Assets/Sprite_Lose.png", {width: 175, height: 248, frames: 17});
+  noteAnim = loadAni("./Assets/Sprite_Note.png", {width: 175, height: 248, frames: 14});
+  thinkAnim = loadAni("./Assets/Sprite_Think.png", {width: 175, height: 248, frames: 11});
+  waitAnim = loadAni("./Assets/Sprite_Wait.png", {width: 175, height: 248, frames: 10});
+  winAnim = loadAni("./Assets/Sprite_Win.png", {width: 175, height: 248, frames: 9});
 }
 
 function setup() {
@@ -68,7 +78,7 @@ function setup() {
     });
 
   // scale down the animation asset
-  angryAnim.scale = 0.5;
+  //angryAnim.scale = 0.5; (mit passeder größe jetzt)
 
   createLevel(currentLevel);
 
@@ -99,9 +109,12 @@ function draw() {
     });
 
     // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
+    // Hier wechselnde Animationen implementieren!!!
+    //Aufruf der Animation, xPos, yPos, gWink
     if (characterBody) {
       characterBody.draw();
-      animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+      animation(idleAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+      idleAnim.frameDelay = 9;
     }
 
     // draw post-it placement hint NOTE: Add svg body condition
