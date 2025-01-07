@@ -1,25 +1,50 @@
 import cv2
 import numpy as np
 import os
-
+import json
 
 # Define the shared directory and notification file paths
 output_directory = "./shared"
 notification_file = os.path.join(output_directory, "ready_for_svg.txt")
+metadata_file = os.path.join(output_directory, "metadata.json")
 
 # Ensure the shared directory exists
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-def notify_svg_conversion(cropped_file, color):
+def notify_svg_conversion(cropped_file, color, stored_position):
     """
     Write a notification to the SVG conversion file indicating a new image is ready.
     """
     with open(notification_file, "w") as f:
         f.write(f"{cropped_file}, {color}")
     print(f"Notification written to {notification_file} - Color: {color}")
+    write_position_to_json(stored_position[0], stored_position[1], color)
 
-def detect_postit_and_draw(frame):
+def detect_projection_area(frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    edges = cv2.Canny(blurred, 50, 150)
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    for contour in contours:
+        if cv2.contourArea(contour) > 1000:
+            epsilon = 0.02 * cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, epsilon, True)
+            if len(approx) == 4:
+                def order_points(pts):
+                    rect = np.zeros((4, 2), dtype="float32")
+                    s = pts.sum(axis=1)
+                    rect[0] = pts[np.argmin(s)]
+                    rect[2] = pts[np.argmax(s)]
+                    diff = np.diff(pts, axis=1)
+                    rect[1] = pts[np.argmin(diff)]
+                    rect[3] = pts[np.argmax(diff)]
+                    return rect
+                return order_points(approx.reshape(4, 2))
+    return None
+
+def detect_postit_and_draw(frame, projection_area=None):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     # Define HSV ranges for yellow and blue Post-its
@@ -32,9 +57,18 @@ def detect_postit_and_draw(frame):
     # Create masks for both colors
     mask_yellow = cv2.inRange(hsv, lower_yellow, upper_yellow)
     mask_blue = cv2.inRange(hsv, lower_blue, upper_blue)
-
+   
     # Process both masks separately
     detected_color = None
+
+    # If a projection area is provided, mask everything outside of it
+    if projection_area is not None:
+        mask_shape = frame.shape[:2]
+        projection_mask = np.zeros(mask_shape, dtype=np.uint8)
+        cv2.fillPoly(projection_mask, [projection_area.astype(int)], 255)
+        mask_yellow = cv2.bitwise_and(mask_yellow, projection_mask)
+        mask_blue = cv2.bitwise_and(mask_blue, projection_mask)
+
     for mask, color in zip([mask_yellow, mask_blue], ["yellow", "blue"]):
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -67,8 +101,45 @@ def detect_postit_and_draw(frame):
                     warped = cv2.warpPerspective(frame, M, (width, height))
                     cv2.polylines(frame, [approx], True, (0, 255, 0), 2)
                     detected_color = color
+                    detect_postit_and_draw.last_contour = approx
                     return warped, detected_color
     return None, None
+
+def get_relative_position(postit_rect, projection_rect):
+    width, height = 1.0, 1.0
+    M = cv2.getPerspectiveTransform(projection_rect, np.array([
+        [0, 0],
+        [width, 0],
+        [width, height],
+        [0, height]
+    ], dtype='float32'))
+    postit_center = np.mean(postit_rect, axis=0).reshape(-1, 1, 2)
+    normalized_center = cv2.perspectiveTransform(postit_center, M)
+    return tuple(normalized_center[0][0])
+
+
+def write_position_to_json(x, y, color, filename="position_color.json"):
+    
+    xpos = float(x)
+    ypos = float(y)
+
+    # Create a dictionary with the data
+    data = {
+        "position": {
+            "x": xpos,
+            "y": ypos
+        },
+        "color": color
+    }
+    
+    file_path = os.path.join(output_directory, filename)
+
+    # Write the dictionary to a JSON file
+    with open(file_path, "w") as json_file:
+        json.dump(data, json_file, indent=4)
+    
+    print(f"Data written to {file_path}")
+
 
 def validate_postit_with_drawing(image):
     """
@@ -109,6 +180,12 @@ def main():
     no_movement_counter = 0
     movement_threshold = 10
 
+     # Initialize smoothing variables for relative position
+    alpha = 0.2  # Smoothing factor for EMA (0 < alpha <= 1)
+    smoothed_position = None  # To store the smoothed position
+    stored_position = None  # To store the position that updates only on significant movement
+    movement_threshold_distance = 0.05  # Threshold for significant movement in relative position (normalized units)
+
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -116,12 +193,58 @@ def main():
 
         frame = cv2.resize(frame, (640, 480))
 
-        # Detect Post-it note and crop the region
-        cropped, detected_color = detect_postit_and_draw(frame)
+         # Detect the projection area
+        projection_area = detect_projection_area(frame)
 
-        if cropped is not None:
+        # Detect Post-it note and crop the region
+        cropped, detected_color = detect_postit_and_draw(frame, projection_area=projection_area)
+
+        if projection_area is not None:
+            # Draw the projection area as a blue polygon
+            cv2.polylines(frame, [projection_area.astype(int)], True, (255, 0, 0), 2)
+
+            # Display debug text
+            cv2.putText(frame, "Projection Area Detected", (10, 50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+
+
+        if cropped is not None and projection_area is not None:
+            
             gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
             gray_cropped = cv2.GaussianBlur(gray_cropped, (11, 11), 0)
+
+
+            # Calculate relative position
+            postit_rect = np.array([point[0] for point in detect_postit_and_draw.last_contour], dtype="float32")
+            relative_position = get_relative_position(postit_rect, projection_area)
+
+            # Smooth the relative position using EMA
+            if smoothed_position is None:
+                smoothed_position = relative_position  # Initialize with the first value
+            else:
+                smoothed_position = alpha * np.array(relative_position) + (1 - alpha) * np.array(smoothed_position)
+
+            # Check for significant movement
+            if stored_position is None:
+                stored_position = smoothed_position  # Initialize stored position
+            else:
+                distance = np.linalg.norm(np.array(smoothed_position) - np.array(stored_position))
+                if distance > movement_threshold_distance:
+                    stored_position = smoothed_position  # Update stored position if movement is significant
+
+            # Draw the Post-it center
+            postit_center = np.mean(postit_rect, axis=0).astype(int)
+            cv2.circle(frame, tuple(postit_center), 5, (0, 0, 255), -1)
+
+            # Display the smoothed and stored relative positions
+            smoothed_text = f"Smoothed Pos: ({smoothed_position[0]:.2f}, {smoothed_position[1]:.2f})"
+            stored_text = f"Stored Pos: ({stored_position[0]:.2f}, {stored_position[1]:.2f})"
+            cv2.putText(frame, smoothed_text, (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            cv2.putText(frame, stored_text, (10, 70),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+
+            
 
             if prev_frame is None:
                 prev_frame = gray_cropped
@@ -144,7 +267,7 @@ def main():
                     print(f"Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
 
                     # Notify SVG converter
-                    notify_svg_conversion(file_path, detected_color)
+                    notify_svg_conversion(file_path, detected_color, stored_position)
 
                     while True:
                         print("Press 'c' to continue or 'q' to quit...")

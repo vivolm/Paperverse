@@ -28,6 +28,7 @@ async function preprocessImage(inputImage, color) {
 }
 // Convert the processed image to SVG using Potrace
 function convertToSvg() {
+    copyJsonFile();
     const trace = new Potrace();
     trace.loadImage(processedImage, function (err) {
         if (err) throw err;
@@ -36,7 +37,23 @@ function convertToSvg() {
     });
 }
 
-// Watch for the flag file and handle processing
+function copyJsonFile() {
+
+    let source = './shared/position_color.json';
+    let destination = '../output/position_color.json';
+
+    try {
+      fs.copyFileSync(source, destination);
+      console.log(`File copied from ${source} to ${destination}`);
+    } catch (error) {
+      console.error('Error copying file:', error);
+    }
+  }
+  
+  
+  
+
+// Watch for the flag file
 function watchForDrawing() {
     console.log("Watching for new drawing...");
 
