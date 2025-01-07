@@ -35,11 +35,13 @@ let noteAnim;
 let thinkAnim;
 let waitAnim;
 let winAnim;
+//Framerate
+let fps = 9;
 
 
 // global game logic
 let gameState = "runGame";
-let currentLevel = 1;
+let currentLevel = 2;
 let finalLevel = 5;
 
 function preload() {
@@ -56,7 +58,23 @@ function preload() {
   thinkAnim = loadAni("./Assets/Sprite_Think.png", {width: 175, height: 248, frames: 11});
   waitAnim = loadAni("./Assets/Sprite_Wait.png", {width: 175, height: 248, frames: 10});
   winAnim = loadAni("./Assets/Sprite_Win.png", {width: 175, height: 248, frames: 9});
+
+  //set framerate with fps variable
+  angryAnim.frameDelay = fps;
+  idleAnim.frameDelay = fps;
+  loseAnim.frameDelay = fps;
+  noteAnim.frameDelay = fps;
+  thinkAnim.frameDelay = fps;
+  waitAnim.frameDelay = fps;
+  winAnim.frameDelay = fps;
+
 }
+
+
+
+
+
+
 
 function setup() {
   const canvas = createCanvas(windowWidth, windowHeight + 10);
@@ -86,22 +104,30 @@ function setup() {
   Runner.run(runner, engine);
 }
 
+
+
+
+
+
+
 function draw() {
+  
   // draw all background images NOTE: replace this code as soon as different levels use different background
   backgroundImgs.forEach((x) => {
     image(x, 0, 0, width, height);
   });
 
+  drawBodies.forEach((x) => {
+    x.draw();
+    if (x.options.label === "spikeBall") {
+      if (isRotating) {
+        Body.rotate(x.body, radians(0.5));
+      }
+    }
+  });
+
   if (gameState == "runGame") {
     // draw all bodies and perform special functions (like rotation)
-    drawBodies.forEach((x) => {
-      x.draw();
-      if (x.options.label === "spikeBall") {
-        if (isRotating) {
-          Body.rotate(x.body, radians(0.5));
-        }
-      }
-    });
 
     // draw the handdrawn svg shape
     svgShapes.forEach((x) => {
@@ -112,32 +138,111 @@ function draw() {
     // Hier wechselnde Animationen implementieren!!!
     //Aufruf der Animation, xPos, yPos, gWink
     if (characterBody) {
-      characterBody.draw();
-      animation(idleAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-      idleAnim.frameDelay = 9;
-    }
+      //
+      if(key === "a"){
+        characterBody.draw();
+        animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+        loseAnim.frame = 0;
+        noteAnim.frame = 0;
+        thinkAnim.frame = 0;
+        waitAnim.frame = 0;
+        winAnim.frame = 0;
+        idleAnim.frame = 0;
 
-    // draw post-it placement hint NOTE: Add svg body condition
-    if (currentLevel == 1) {
-      push();
-      rectMode(CENTER);
-      stroke(247, 54, 0);
-      strokeWeight(3);
-      noFill();
-      drawingContext.setLineDash([5, 5]);
-      rect(width / 2, height / 4, 200, 200);
-      pop();
+      }
+      else if(key === "b"){
+        characterBody.draw();
+        animation(loseAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+        angryAnim.frame = 0;
+        noteAnim.frame = 0;
+        thinkAnim.frame = 0;
+        waitAnim.frame = 0;
+        winAnim.frame = 0;
+        idleAnim.frame = 0;
+      }
+      else if(key === "c"){
+        characterBody.draw();
+        animation(noteAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+        angryAnim.frame = 0;
+        loseAnim.frame = 0;
+        thinkAnim.frame = 0;
+        waitAnim.frame = 0;
+        winAnim.frame = 0;
+        idleAnim.frame = 0;
+      }
+      else if(key === "d"){
+        characterBody.draw();
+        animation(thinkAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+        angryAnim.frame = 0;
+        loseAnim.frame = 0;
+        noteAnim.frame = 0;
+        waitAnim.frame = 0;
+        winAnim.frame = 0;
+        idleAnim.frame = 0;
+      }
+      else if(key === "e"){
+        characterBody.draw();
+        animation(waitAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+        angryAnim.frame = 0;
+        loseAnim.frame = 0;
+        noteAnim.frame = 0;
+        thinkAnim.frame = 0;
+        waitAnim.frame = 0;
+        idleAnim.frame = 0;
+      }
+      else if(key === "f"){
+        characterBody.draw();
+        animation(winAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+        angryAnim.frame = 0;
+        loseAnim.frame = 0;
+        noteAnim.frame = 0;
+        thinkAnim.frame = 0;
+        waitAnim.frame = 0;
+        idleAnim.frame = 0;
+      }
+      else{
+        //Idle Animation als Default
+        characterBody.draw();
+        animation(idleAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+        angryAnim.frame = 0;
+        loseAnim.frame = 0;
+        noteAnim.frame = 0;
+        thinkAnim.frame = 0;
+        waitAnim.frame = 0;
+        winAnim.frame = 0;
+      }
+      
     }
+    
   }
 
+  // draw post-it placement hint NOTE: Add svg body condition
+  if (currentLevel == 1) {
+    push();
+    rectMode(CENTER);
+    stroke(247, 54, 0);
+    strokeWeight(2);
+    noFill();
+    drawingContext.setLineDash([5, 5]);
+    rect(width / 2, height / 4, 200, 200);
+    pop();
+  }
+
+  //Diese hier extra, da sie außerhalb des normalen Gameablaufes laufen
   if (gameState === "failure") {
-    // play disappointed char anim here
+    characterBody.draw();
+    animation(loseAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+    idleAnim.frameDelay = 9;
   }
 
   if (gameState === "win") {
-    // play happy char anim here
+    characterBody.draw();
+    animation(winAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+    idleAnim.frameDelay = 9;
   }
+
 }
+
 
 function loadSVG(url) {
   return new Promise((resolve, reject) => {
@@ -184,16 +289,16 @@ function loadSVG(url) {
 }
 
 function mousePressed() {
-  // if (gameState === "runGame") {
-  //   if (svgShapes.length > 0) {
-  //     svgShapes.forEach((x) => {
-  //       x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-  //     });
-  //   }
-  //   svgShapes = []; // remove old SVG bodies from drawing logic
-  //   drawnSVG = new PolygonFromSVG(world, { x: mouseX, y: mouseY, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 2 }, { label: "drawnBody" });
-  //   svgShapes.push(drawnSVG);
-  // }
+   if (gameState === "runGame") {
+     if (svgShapes.length > 0) {
+       svgShapes.forEach((x) => {
+         x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+       });
+     }
+     svgShapes = []; // remove old SVG bodies from drawing logic
+     drawnSVG = new PolygonFromSVG(world, { x: mouseX, y: mouseY, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 2 }, { label: "drawnBody" });
+     svgShapes.push(drawnSVG);
+   }
 
   getDrawPosition().then((pos) => {
     let testBlock;
