@@ -1,9 +1,15 @@
 class Ball extends Block {
-  constructor(world, attributes, options) {
-    super(world, attributes, options);
+  constructor(world, attributes, options, drawPoint) {
+    super(world, attributes, options, drawPoint);
   }
 
   addBody() {
     this.body = Matter.Bodies.circle(this.attributes.x, this.attributes.y, this.attributes.r, this.options);
   }
+
+  // draw() {
+  //   if (this.body) {
+  //     super.draw();
+  //   }
+  // }
 }
