@@ -146,7 +146,7 @@ function draw() {
           console.log('New Color:', pos.color);
 
           // load the SVG and then simplify it
-          loadSVG("./SVG/output.svg")
+          loadSVG("../output/output.svg")
           .then((simplifiedSVG) => {
             drawableSVG = simplifiedSVG;
             // get all bodies to check for collision

@@ -161,7 +161,10 @@ def get_relative_position(postit_rect, projection_rect):
     ], dtype='float32'))
     postit_center = np.mean(postit_rect, axis=0).reshape(-1, 1, 2)
     normalized_center = cv2.perspectiveTransform(postit_center, M)
-    return tuple(normalized_center[0][0])
+    
+    # Swap the x and y coordinates to invert the grid
+    x, y = normalized_center[0][0]
+    return y, x
 
 
 def write_position_to_json(x, y, color, filename="position_color.json"):
@@ -220,7 +223,7 @@ def detect_drawing(prev_frame, current_frame):
 
 
 def main():
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(2) #Webcam
     prev_frame = None
     drawing_detected = False
     no_movement_counter = 0

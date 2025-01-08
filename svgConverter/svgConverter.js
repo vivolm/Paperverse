@@ -14,7 +14,7 @@ async function preprocessImage(inputImage, color) {
     // Trim and normalize the color string
     const normalizedColor = color.trim().toLowerCase();
 
-    let brightnessFactor = (normalizedColor === 'blue') ? 3.2 : 1.4;
+    let brightnessFactor = (normalizedColor === 'blue') ? 3.8 : 1.4;
 
     console.log(`Detected ${normalizedColor} Post-it. Applying brightness: ${brightnessFactor}x`);
 
