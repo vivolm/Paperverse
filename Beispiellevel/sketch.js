@@ -59,7 +59,7 @@ function preload() {
   noteAnim = loadAni("./Assets/Sprite_Note.png", {width: 175, height: 248, frames: 14});
   thinkAnim = loadAni("./Assets/Sprite_Think.png", {width: 175, height: 248, frames: 11});
   waitAnim = loadAni("./Assets/Sprite_Wait.png", {width: 175, height: 248, frames: 10});
-  winAnim = loadAni("./Assets/Sprite_Win.png", {width: 175, height: 248, frames: 9});
+  winAnim = loadAni("./Assets/Sprite_Win.png", {width: 175, height: 248, frames: 13});
 
   //set framerate with fps variable
   angryAnim.frameDelay = fps;
@@ -69,7 +69,6 @@ function preload() {
   thinkAnim.frameDelay = fps;
   waitAnim.frameDelay = fps;
   winAnim.frameDelay = fps;
-
 }
 
 
@@ -188,10 +187,7 @@ function draw() {
       else{
         //Idle Animation als Default
         playIdle();
-      }
-
-      text(currentFrame + " - " + endFrame, width/2, height/2);
-      
+      }      
     }
 
     
@@ -223,6 +219,13 @@ function draw() {
   strokeWeight(10);
   noFill();
   rect(5,5,width-10,height-10);
+
+  textSize(50);
+  textAlign(CENTER);
+  textStyle(BOLD);
+  noStroke();
+  fill(0);
+  text(gameState, width/2, height/2);
 
 }
 
@@ -268,9 +271,15 @@ function failScreen(){
   fill(0);
   text("YOU SUCK", width/2, height/3);
 
-  setTimeout(() => {
+  if(currentFrame <= loseAnim.lastFrame){
+    currentFrame+=6/60;
+    loseAnim.loop();
+  }
+  //return to idleState
+  else{
+    loseAnim.stop();
     gameState = "runGame";
-  }, 2700); // Adjust the delay as needed  
+  }
 }
 
 
@@ -284,9 +293,16 @@ function winScreen(){
   fill(0);
   text("YOU RULE", width/2, height/3);
 
-  setTimeout(() => {
+  //Make sure Screen lasts as long as animation
+  if(currentFrame <= winAnim.lastFrame){
+    currentFrame+=6/60;
+    winAnim.loop();
+  }
+  //return to idleState and runGame-Status
+  else{
+    winAnim.stop();
     gameState = "runGame";
-  }, 2600); // Adjust the delay as needed
+  }
 }
 
 
@@ -346,7 +362,7 @@ function mousePressed() {
      svgShapes.push(drawnSVG);
    }
 
-  getDrawPosition().then((pos) => {
+  /*getDrawPosition().then((pos) => {
     let testBlock;
     let levelBodies = Composite.allBodies(world);
     console.log(levelBodies);
@@ -363,10 +379,10 @@ function mousePressed() {
     } else {
       drawBodies.push(testBlock);
     }
-  });
+  });*/
 }
 
-async function getDrawPosition() {
+/*async function getDrawPosition() {
   let position_color = {
     x: 0,
     y: 0,
@@ -388,7 +404,7 @@ async function getDrawPosition() {
   } catch (error) {
     console.error("There was a problem with the fetch operation:", error);
   }
-}
+}*/
 
 function keyPressed() {
   // change the current level on key press
@@ -675,10 +691,10 @@ Events.on(engine, "collisionStart", function (event) {
 function pressButton(button) {
   // Move the button down
   Body.translate(button, { x: 0, y: 10 });
+  gameState = "win";
 
   // Move it back up after a short delay
   setTimeout(() => {
     Body.translate(button, { x: 0, y: -10 });
-    gameState = "win";
   }, 500); // Adjust the delay as needed
 }
