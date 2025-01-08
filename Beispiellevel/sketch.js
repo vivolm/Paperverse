@@ -1,3 +1,4 @@
+
 // matter.js module aliases
 const Engine = Matter.Engine,
   Runner = Matter.Runner,
@@ -28,6 +29,12 @@ let characterBody;
 let spikeBall;
 let rotationSpeed = 0.0001;
 let isRotating = true;
+// global variable for data tracking
+let lastPositionColor = {
+  x: null,
+  y: null,
+  color: null,
+};
 
 // global game logic
 let gameState = "runGame";
@@ -124,7 +131,48 @@ function draw() {
   if (gameState === "win") {
     // play happy char anim here
   }
+
+  // RRRRRRRRRRRRRRRR Check for changes in position_color.json every 1000 milliseconds (1 second)
+  // Check for changes in position_color.json every 60 frames (approximately every second at 60 FPS)
+  if (frameCount % 60 === 0) {
+    getDrawPosition().then((pos) => {
+      // Compare with last fetched position
+      if (
+        pos.x !== lastPositionColor.x ||
+        pos.y !== lastPositionColor.y ||
+        pos.color !== lastPositionColor.color
+      ) {
+        // Log the changes to the console
+        console.log('Position or color has changed:');
+        console.log('New Position:', pos.x, pos.y);
+        console.log('New Color:', pos.color);
+
+        if (gameState === "runGame") {
+             if (svgShapes.length > 0) {
+             svgShapes.forEach((x) => {
+                 x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+               });
+             }
+             svgShapes = []; // remove old SVG bodies from drawing logic
+             drawnSVG = new PolygonFromSVG(world, { x: pos.x, y: pos.y, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 2 }, { label: "drawnBody" });
+             svgShapes.push(drawnSVG);
+        }
+        // Update the last position color
+        lastPositionColor = pos;
+
+        // Update the position of the relevant object (if necessary)
+        if (characterBody) {
+          Body.setPosition(characterBody.body, { x: pos.x, y: pos.y });
+          // Optionally, update the color or do something else based on `pos.color`
+          // For example, if your characterBody has a color property:
+          // characterBody.color = pos.color; 
+        }
+      }
+    });
+  }
 }
+
+
 
 function loadSVG(url) {
   return new Promise((resolve, reject) => {
