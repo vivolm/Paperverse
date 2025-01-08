@@ -12,14 +12,60 @@ metadata_file = os.path.join(output_directory, "metadata.json")
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-def notify_svg_conversion(cropped_file, color, stored_position):
+def notify_svg_conversion(file_path, detected_color):
     """
-    Write a notification to the SVG conversion file indicating a new image is ready.
+    Writes a .txt file to notify about the SVG conversion.
+
+    Parameters:
+        file_path (str): The path to the cropped image file.
+        detected_color (str): The detected color of the Post-it.
+        position (tuple): The position of the Post-it (x, y coordinates).
+        output_directory (str): Directory to save the .txt file.
+        file_name (str): Name of the .txt file to save (default is 'conversion_info.txt').
+
+    Returns:
+        str: The file path where the .txt file was saved, or None if the save failed.
     """
-    with open(notification_file, "w") as f:
-        f.write(f"{cropped_file}, {color}")
-    print(f"Notification written to {notification_file} - Color: {color}")
-    write_position_to_json(stored_position[0], stored_position[1], color)
+    if not file_path:
+        print("Error: Image file path is invalid, cannot write conversion info.")
+        return None
+
+    try:
+        with open(notification_file, 'w') as f:
+           with open(notification_file, 'w') as f:
+                f.write(f"{file_path},{detected_color}")
+
+        print(f"SVG conversion info saved at {notification_file}")
+        
+        return notification_file
+    except Exception as e:
+        print(f"Error writing SVG notification info: {e}")
+        return None
+
+def save_cropped_image(cropped, file_name="detected_postit.png"):
+    """
+    Saves the cropped Post-it image to disk.
+
+    Parameters:
+        cropped (ndarray): The cropped image to save.
+        output_directory (str): Directory to save the image in.
+        file_name (str): Name of the file to save 
+
+    Returns:
+        str: The file path where the image was saved, or None if the save failed.
+    """
+    if cropped is None:
+        print("Error: Cropped image is None, cannot save.")
+        return None
+    
+    file_path = os.path.join(output_directory, file_name)
+    try:
+        cv2.imwrite(file_path, cropped)
+        print(f"Cropped image saved at {file_path}")
+        return file_path
+    except Exception as e:
+        print(f"Error saving cropped image: {e}")
+        return None
 
 def detect_projection_area(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -178,7 +224,14 @@ def main():
     prev_frame = None
     drawing_detected = False
     no_movement_counter = 0
-    movement_threshold = 10
+    movement_threshold = 60
+
+    postit_detected = False
+    postit_removed = False
+    drawing_completed = False
+    drawing_validated = False
+     # Tolerance for temporary obstructions
+
 
      # Initialize smoothing variables for relative position
     alpha = 0.2  # Smoothing factor for EMA (0 < alpha <= 1)
@@ -200,6 +253,8 @@ def main():
         cropped, detected_color = detect_postit_and_draw(frame, projection_area=projection_area)
 
         if projection_area is not None:
+            # Reset the missing counter when the projection area is detected
+            projection_area_missing_counter = 0
             # Draw the projection area as a blue polygon
             cv2.polylines(frame, [projection_area.astype(int)], True, (255, 0, 0), 2)
 
@@ -208,85 +263,130 @@ def main():
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
 
-        if cropped is not None and projection_area is not None:
-            
-            gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
-            gray_cropped = cv2.GaussianBlur(gray_cropped, (11, 11), 0)
+            if cropped is not None:
+                
+                # Post-it detected
+                if not postit_detected:
+                    print("Post-it detected for the first time.")
+                    postit_detected = True
+                    postit_removed = False
 
 
-            # Calculate relative position
-            postit_rect = np.array([point[0] for point in detect_postit_and_draw.last_contour], dtype="float32")
-            relative_position = get_relative_position(postit_rect, projection_area)
+                # Calculate relative position
+                postit_rect = np.array([point[0] for point in detect_postit_and_draw.last_contour], dtype="float32")
+                relative_position = get_relative_position(postit_rect, projection_area)
 
-            # Smooth the relative position using EMA
-            if smoothed_position is None:
-                smoothed_position = relative_position  # Initialize with the first value
-            else:
-                smoothed_position = alpha * np.array(relative_position) + (1 - alpha) * np.array(smoothed_position)
-
-            # Check for significant movement
-            if stored_position is None:
-                stored_position = smoothed_position  # Initialize stored position
-            else:
-                distance = np.linalg.norm(np.array(smoothed_position) - np.array(stored_position))
-                if distance > movement_threshold_distance:
-                    stored_position = smoothed_position  # Update stored position if movement is significant
-
-            # Draw the Post-it center
-            postit_center = np.mean(postit_rect, axis=0).astype(int)
-            cv2.circle(frame, tuple(postit_center), 5, (0, 0, 255), -1)
-
-            # Display the smoothed and stored relative positions
-            smoothed_text = f"Smoothed Pos: ({smoothed_position[0]:.2f}, {smoothed_position[1]:.2f})"
-            stored_text = f"Stored Pos: ({stored_position[0]:.2f}, {stored_position[1]:.2f})"
-            cv2.putText(frame, smoothed_text, (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            cv2.putText(frame, stored_text, (10, 70),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-
-            
-
-            if prev_frame is None:
-                prev_frame = gray_cropped
-                continue
-
-            if detect_drawing(prev_frame, gray_cropped):
-                drawing_detected = True
-                no_movement_counter = 0
-            else:
-                if drawing_detected:
-                    no_movement_counter += 1
-
-            if no_movement_counter >= movement_threshold:
-                print("Drawing completed! Validating image...")
-                if validate_postit_with_drawing(cropped):
-                    print("Validation passed. Saving image...")
-                    
-                    file_path = os.path.join(output_directory, f"detected_postit.png")
-                    cv2.imwrite(file_path, cropped)
-                    print(f"Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
-
-                    # Notify SVG converter
-                    notify_svg_conversion(file_path, detected_color, stored_position)
-
-                    while True:
-                        print("Press 'c' to continue or 'q' to quit...")
-                        key = cv2.waitKey(0) & 0xFF
-                        if key == ord('c'):
-                            drawing_detected = False
-                            no_movement_counter = 0
-                            prev_frame = None
-                            break
-                        elif key == ord('q'):
-                            cap.release()
-                            cv2.destroyAllWindows()
-                            return
+                # Smooth the relative position using EMA
+                if smoothed_position is None:
+                    smoothed_position = relative_position  # Initialize with the first value
                 else:
-                    print("Validation failed. Discarding image.")
-                    drawing_detected = False
-                    no_movement_counter = 0
+                    smoothed_position = alpha * np.array(relative_position) + (1 - alpha) * np.array(smoothed_position)
 
-            prev_frame = gray_cropped
+                # Check for significant movement
+                if stored_position is None:
+                    stored_position = smoothed_position  # Initialize stored position
+                else:
+                    distance = np.linalg.norm(np.array(smoothed_position) - np.array(stored_position))
+                    if distance > movement_threshold_distance:
+                        stored_position = smoothed_position  # Update stored position if movement is significant
+
+                # Draw the Post-it center
+                postit_center = np.mean(postit_rect, axis=0).astype(int)
+                cv2.circle(frame, tuple(postit_center), 5, (0, 0, 255), -1)
+
+                # Display the smoothed and stored relative positions
+                smoothed_text = f"Smoothed Pos: ({smoothed_position[0]:.2f}, {smoothed_position[1]:.2f})"
+                stored_text = f"Stored Pos: ({stored_position[0]:.2f}, {stored_position[1]:.2f})"
+                cv2.putText(frame, smoothed_text, (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(frame, stored_text, (10, 70),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+
+                gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+                gray_cropped = cv2.GaussianBlur(gray_cropped, (11, 11), 0)
+
+                if prev_frame is None:
+                    prev_frame = gray_cropped
+                    continue
+
+                if detect_drawing(prev_frame, gray_cropped):
+                    drawing_detected = True
+                    no_movement_counter = 0
+                    drawing_completed = True
+                    print("Drawing detected on Post-it.")
+                    if validate_postit_with_drawing(cropped):
+                        print("Validation passed.")
+                        drawing_detected = True
+                        drawing_completed = True
+                        drawing_validated = True
+                        save_cropped_image(cropped)
+                        write_position_to_json(stored_position[0], stored_position[1], detected_color)
+                else:
+                    if drawing_detected:
+                        no_movement_counter += 1
+
+                if no_movement_counter >= movement_threshold and not drawing_validated:
+                    print("Drawing completed! Validating image...")
+                    if validate_postit_with_drawing(cropped):
+                        print("Validation passed.")
+                        drawing_detected = True
+                        drawing_completed = True
+                        drawing_validated = True
+                        
+                        
+
+                    else:
+                        print("Validation failed. Discarding image.")
+                        drawing_detected = False
+                        drawing_completed = False
+                        no_movement_counter = 0
+
+                prev_frame = gray_cropped
+                
+            elif postit_detected and drawing_completed and drawing_validated and not postit_removed:
+                # Post-it was previously detected but is now missing
+                print("Post-it removed from the projection area.")
+                postit_removed = True
+                postit_detected = False
+                drawing_completed = False
+                
+               
+                file_path = os.path.join(output_directory, f"detected_postit.png")
+                
+                
+                # Notify SVG converter
+                notify_svg_conversion(file_path, detected_color)
+               
+                while True:
+                    print("Press 'c' to continue or 'q' to quit...")
+                    key = cv2.waitKey(0) & 0xFF
+                    if key == ord('c'):
+                        drawing_detected = False
+                        no_movement_counter = 0
+                        prev_frame = None
+                        break
+                    elif key == ord('q'):
+                        cap.release()
+                        cv2.destroyAllWindows()
+                        return
+                
+             
+
+            elif postit_removed and cropped is not None:
+                # Post-it is detected again after removal
+                print("New Post-it detected.")
+                postit_detected = True
+                postit_removed = False
+                # drawing_completed = False  # Reset drawing state for new Post-it
+
+            
+
+        
+            
+
+        # Display the status on the frame
+            status_text = f"Post-it Detected: {postit_detected}, Removed: {postit_removed}, Drawing: {drawing_completed}"
+            cv2.putText(frame, status_text, (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
         cv2.imshow("Webcam", frame)
 
