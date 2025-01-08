@@ -37,6 +37,8 @@ let waitAnim;
 let winAnim;
 //Framerate
 let fps = 9;
+let currentFrame = 0;
+let endFrame;
 
 
 // global game logic
@@ -136,8 +138,6 @@ function draw() {
 
   if (gameState == "runGame") {
     // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
-    // Hier wechselnde Animationen implementieren!!!
-    //Aufruf der Animation, xPos, yPos, gWink
     if (characterBody) {
       characterBody.draw();
       //Placeholder Anforderungen für das Abspielen der verschiedenen Animationen
@@ -149,8 +149,10 @@ function draw() {
         waitAnim.frame = 0;
         winAnim.frame = 0;
         idleAnim.frame = 0;
+
+        playOnce(angryAnim);
       }
-      else if(key === "c"){
+      else if(key === "b"){
         animation(noteAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
         angryAnim.frame = 0;
         loseAnim.frame = 0;
@@ -158,8 +160,11 @@ function draw() {
         waitAnim.frame = 0;
         winAnim.frame = 0;
         idleAnim.frame = 0;
+
+        playOnce(noteAnim);
+        
       }
-      else if(key === "d"){
+      else if(key === "c"){
         animation(thinkAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
         angryAnim.frame = 0;
         loseAnim.frame = 0;
@@ -167,28 +172,28 @@ function draw() {
         waitAnim.frame = 0;
         winAnim.frame = 0;
         idleAnim.frame = 0;
+
+        playOnce(thinkAnim);
       }
-      else if(key === "e"){
+      else if(key === "d"){
         animation(waitAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
         angryAnim.frame = 0;
         loseAnim.frame = 0;
         noteAnim.frame = 0;
-        thinkAnim.frame = 0;
-        waitAnim.frame = 0;
+        winAnim.frame = 0;
         idleAnim.frame = 0;
+
+        playOnce(waitAnim);
       }
       else{
         //Idle Animation als Default
-        animation(idleAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        angryAnim.frame = 0;
-        loseAnim.frame = 0;
-        noteAnim.frame = 0;
-        thinkAnim.frame = 0;
-        waitAnim.frame = 0;
-        winAnim.frame = 0;
+        playIdle();
       }
+
+      text(currentFrame + " - " + endFrame, width/2, height/2);
       
     }
+
     
   }
 
@@ -202,50 +207,86 @@ function draw() {
     drawingContext.setLineDash([5, 5]);
     rect(width / 2, height / 4, 200, 200);
     pop();
-
-    
-    if(gameState === "runGame" && mouseIsPressed){
-      if(mouseX >= width/2-100 && mouseX <= width/2+100 && mouseY >= height/4-100 && mouseY <= height/4+100){
-        gameState = "win";
-      }
-      else{
-        gameState = "failure";
-      }
-    }
-    
   }
 
   //Diese hier extra, da sie außerhalb des normalen Gameablaufes laufen
   if (gameState === "failure") {
-    characterBody.draw();
-    animation(loseAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-
-    textAlign(CENTER);
-    textSize(350);
-    textStyle(BOLD);
-    fill(0);
-    text("YOU SUCK", width/2, height/3);
-
-    setTimeout(() => {
-      gameState = "runGame";
-    }, 2700); // Adjust the delay as needed
+    failScreen();
   }
 
   if (gameState === "win") {
-    characterBody.draw();
-    animation(winAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-
-    textAlign(CENTER);
-    textSize(350);
-    textStyle(BOLD);
-    fill(0);
-    text("YOU RULE", width/2, height/3);
-
-    setTimeout(() => {
-      gameState = "runGame";
-    }, 1300); // Adjust the delay as needed
+    winScreen();
   }
 
+
+  //Schwarzer Rahmen um Spielfeld
+  strokeWeight(10);
+  noFill();
+  rect(5,5,width-10,height-10);
+
+}
+
+
+//Play Animation once then return back to idle state until key is called
+function playOnce(aniTitle){
+  endFrame = aniTitle.lastFrame;
+  //play Animation only once
+  if(currentFrame <= endFrame){
+    currentFrame+=6/60;
+    aniTitle.loop();
+  }
+  //return to idleState
+  else{
+    aniTitle.stop();
+    key = "i";
+  }
+}
+
+function playIdle(){
+  animation(idleAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+
+  //Zurücksetzen aller Frames
+  angryAnim.frame = 0;
+  loseAnim.frame = 0;
+  noteAnim.frame = 0;
+  thinkAnim.frame = 0;
+  waitAnim.frame = 0;
+  winAnim.frame = 0;
+
+  //zurücksetzen der Frame Werte für Neustart der spezifischen Animationen
+  currentFrame = 0;
+  endFrame = 0;
+}
+
+function failScreen(){
+  characterBody.draw();
+  animation(loseAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+
+  textAlign(CENTER);
+  textSize(350);
+  textStyle(BOLD);
+  fill(0);
+  text("YOU SUCK", width/2, height/3);
+
+  setTimeout(() => {
+    gameState = "runGame";
+  }, 2700); // Adjust the delay as needed  
+}
+
+
+function winScreen(){
+  characterBody.draw();
+  animation(winAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+
+  textAlign(CENTER);
+  textSize(350);
+  textStyle(BOLD);
+  fill(0);
+  text("YOU RULE", width/2, height/3);
+
+  setTimeout(() => {
+    gameState = "runGame";
+  }, 2600); // Adjust the delay as needed
 }
 
 
