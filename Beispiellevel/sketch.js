@@ -41,7 +41,7 @@ let fps = 9;
 
 // global game logic
 let gameState = "runGame";
-let currentLevel = 2;
+let currentLevel = 1;
 let finalLevel = 5;
 
 function preload() {
@@ -117,6 +117,7 @@ function draw() {
     image(x, 0, 0, width, height);
   });
 
+  // draw all bodies and perform special functions (like rotation)
   drawBodies.forEach((x) => {
     x.draw();
     if (x.options.label === "spikeBall") {
@@ -126,21 +127,21 @@ function draw() {
     }
   });
 
+  // draw the handdrawn svg shape
+  svgShapes.forEach((x) => {
+    x.draw();
+  });
+
+
+
   if (gameState == "runGame") {
-    // draw all bodies and perform special functions (like rotation)
-
-    // draw the handdrawn svg shape
-    svgShapes.forEach((x) => {
-      x.draw();
-    });
-
     // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
     // Hier wechselnde Animationen implementieren!!!
     //Aufruf der Animation, xPos, yPos, gWink
     if (characterBody) {
-      //
+      characterBody.draw();
+      //Placeholder Anforderungen für das Abspielen der verschiedenen Animationen
       if(key === "a"){
-        characterBody.draw();
         animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
         loseAnim.frame = 0;
         noteAnim.frame = 0;
@@ -148,20 +149,8 @@ function draw() {
         waitAnim.frame = 0;
         winAnim.frame = 0;
         idleAnim.frame = 0;
-
-      }
-      else if(key === "b"){
-        characterBody.draw();
-        animation(loseAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        angryAnim.frame = 0;
-        noteAnim.frame = 0;
-        thinkAnim.frame = 0;
-        waitAnim.frame = 0;
-        winAnim.frame = 0;
-        idleAnim.frame = 0;
       }
       else if(key === "c"){
-        characterBody.draw();
         animation(noteAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
         angryAnim.frame = 0;
         loseAnim.frame = 0;
@@ -171,7 +160,6 @@ function draw() {
         idleAnim.frame = 0;
       }
       else if(key === "d"){
-        characterBody.draw();
         animation(thinkAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
         angryAnim.frame = 0;
         loseAnim.frame = 0;
@@ -181,18 +169,7 @@ function draw() {
         idleAnim.frame = 0;
       }
       else if(key === "e"){
-        characterBody.draw();
         animation(waitAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        angryAnim.frame = 0;
-        loseAnim.frame = 0;
-        noteAnim.frame = 0;
-        thinkAnim.frame = 0;
-        waitAnim.frame = 0;
-        idleAnim.frame = 0;
-      }
-      else if(key === "f"){
-        characterBody.draw();
-        animation(winAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
         angryAnim.frame = 0;
         loseAnim.frame = 0;
         noteAnim.frame = 0;
@@ -202,7 +179,6 @@ function draw() {
       }
       else{
         //Idle Animation als Default
-        characterBody.draw();
         animation(idleAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
         angryAnim.frame = 0;
         loseAnim.frame = 0;
@@ -226,19 +202,48 @@ function draw() {
     drawingContext.setLineDash([5, 5]);
     rect(width / 2, height / 4, 200, 200);
     pop();
+
+    
+    if(gameState === "runGame" && mouseIsPressed){
+      if(mouseX >= width/2-100 && mouseX <= width/2+100 && mouseY >= height/4-100 && mouseY <= height/4+100){
+        gameState = "win";
+      }
+      else{
+        gameState = "failure";
+      }
+    }
+    
   }
 
   //Diese hier extra, da sie außerhalb des normalen Gameablaufes laufen
   if (gameState === "failure") {
     characterBody.draw();
     animation(loseAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-    idleAnim.frameDelay = 9;
+
+    textAlign(CENTER);
+    textSize(350);
+    textStyle(BOLD);
+    fill(0);
+    text("YOU SUCK", width/2, height/3);
+
+    setTimeout(() => {
+      gameState = "runGame";
+    }, 2700); // Adjust the delay as needed
   }
 
   if (gameState === "win") {
     characterBody.draw();
     animation(winAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-    idleAnim.frameDelay = 9;
+
+    textAlign(CENTER);
+    textSize(350);
+    textStyle(BOLD);
+    fill(0);
+    text("YOU RULE", width/2, height/3);
+
+    setTimeout(() => {
+      gameState = "runGame";
+    }, 1300); // Adjust the delay as needed
   }
 
 }
@@ -366,7 +371,7 @@ function createLevel(levelIndex, clear) {
   // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data
   let levelDims = [
     {
-      character: { scale: 0.5 }, // character scale for all levels
+      character: { scale: 1 }, // character scale for all levels
     },
     {
       dimensions: [
@@ -413,6 +418,7 @@ function createLevel(levelIndex, clear) {
       // tutorial 1
       background: backgroundImgs[0],
       terrain: [{ x: levelDims[1].dimensions[0].w / 2, y: height - levelDims[1].dimensions[0].h / 2, w: levelDims[1].dimensions[0].w, h: levelDims[1].dimensions[0].h }],
+      char: { x: levelDims[1].dimensions[0].w / 4, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
     },
     {
       // tutorial 2
@@ -434,6 +440,7 @@ function createLevel(levelIndex, clear) {
           type: "button",
         },
       ],
+      char: { x: levelDims[2].dimensions[0].w / 4, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
     },
     {
       // level 1 bridge
@@ -485,6 +492,7 @@ function createLevel(levelIndex, clear) {
         { x: width - levelDims[5].dimensions[0].w / 2, y: levelDims[5].dimensions[0].h / 2, w: levelDims[5].dimensions[0].w, h: levelDims[5].dimensions[0].h },
         { x: levelDims[5].dimensions[1].w / 2, y: height - levelDims[5].dimensions[1].h / 2, w: levelDims[5].dimensions[1].w, h: levelDims[5].dimensions[1].h },
       ],
+      char: { x: levelDims[5].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
     },
   ];
 
@@ -495,7 +503,7 @@ function createLevel(levelIndex, clear) {
   // create bodies (e.g. static/dynamic geo, sensors, characters)
   if (level.terrain) {
     level.terrain.forEach((geo) => {
-      let levelGeo = new Block(world, { x: geo.x, y: geo.y, w: geo.w, h: geo.h, color: "white", stroke: "black", weight: 2 }, { isStatic: true, label: "terrain" });
+      let levelGeo = new Block(world, { x: geo.x, y: geo.y, w: geo.w, h: geo.h, color: "white", stroke: "black", weight: 6.5 }, { isStatic: true, label: "terrain" });
       drawBodies.push(levelGeo);
     });
   }
@@ -528,7 +536,7 @@ function createLevel(levelIndex, clear) {
       if (button.type === "base") {
         buttonBlock = new Block(world, { x: button.x, y: button.y, w: button.w, h: button.h, color: "black" }, { isStatic: true, label: "buttonBase" });
       } else if (button.type === "button") {
-        buttonBlock = new Block(world, { x: button.x, y: button.y, w: button.w, h: button.h, color: "red", stroke: "black", weight: 2 }, { isStatic: true, label: "button" });
+        buttonBlock = new Block(world, { x: button.x, y: button.y, w: button.w, h: button.h, color: "white", stroke: "black", weight: 6.5 }, { isStatic: true, label: "button" });
       }
       drawBodies.push(buttonBlock);
     });
@@ -630,5 +638,6 @@ function pressButton(button) {
   // Move it back up after a short delay
   setTimeout(() => {
     Body.translate(button, { x: 0, y: -10 });
+    gameState = "win";
   }, 500); // Adjust the delay as needed
 }
