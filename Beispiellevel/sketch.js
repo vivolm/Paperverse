@@ -53,11 +53,17 @@ function preload() {
     height: 500,
     frames: 11,
   });
+
+  loadJSON("../output/position_color.json", (test) => {
+    console.log(test);
+  });
 }
 
 function setup() {
   const canvas = createCanvas(windowWidth, windowHeight + 10);
   canvas.parent("sketch-holder");
+
+ 
 
   // set paper.js working space to p5.js canvas
   canvas.id("myCanvas");
@@ -143,12 +149,7 @@ function draw() {
           loadSVG("./SVG/output.svg")
           .then((simplifiedSVG) => {
             drawableSVG = simplifiedSVG;
-          })
-          .catch((error) => {
-            console.error(error);
-          });
-
-          // get all bodies to check for collision
+            // get all bodies to check for collision
           let levelBodies = Composite.allBodies(world);
 
           // map the positions to the actual screen
@@ -169,13 +170,24 @@ function draw() {
                } else if (pos.color === "yellow") {
                 bodyStatic = false;
                }
-               drawnSVG = new PolygonFromSVG(world, { x: pos.x, y: pos.y, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 2 }, { label: "drawnBody" , isStatic: bodyStatic});
-               if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
-                console.log("collision of drawn body with level geometry");
-                drawnSVG.removeBody();
-              } else {
-                svgShapes.push(drawnSVG);
-              }
+
+              
+                drawnSVG = new PolygonFromSVG(world, { x: pos.x, y: pos.y, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 2 }, { label: "drawnBody" , isStatic: bodyStatic});
+                if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
+                  console.log("collision of drawn body with level geometry");
+                  drawnSVG.removeBody();
+                } else {
+                  svgShapes.push(drawnSVG);
+                }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+
+          
+               
+              
+             
                
           
           // Update the last position color
@@ -261,8 +273,8 @@ async function getDrawPosition() {
     }
     const data = await response.json();
 
-    position_color.x = data.relative_position.x;
-    position_color.y = data.relative_position.y;
+    position_color.x = data.position.x;
+    position_color.y = data.position.y;
     position_color.color = data.color;
     return position_color; // Return the position/color object
   } catch (error) {
