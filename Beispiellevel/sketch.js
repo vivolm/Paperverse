@@ -48,7 +48,23 @@ let finalLevel = 5;
 
 function preload() {
   // load each background and push it to the backgrounds array (backgroundImgs)
-  loadImage("./Assets/level_1_background.jpg", function (img) {
+  loadImage("./Assets/01_HG.gif", function (img) {
+    backgroundImgs.push(img);
+  });
+
+  loadImage("./Assets/02_HG.gif", function (img) {
+    backgroundImgs.push(img);
+  });
+
+  loadImage("./Assets/03_HG.gif", function (img) {
+    backgroundImgs.push(img);
+  });
+
+  loadImage("./Assets/04_HG.gif", function (img) {
+    backgroundImgs.push(img);
+  });
+
+  loadImage("./Assets/05_HG.gif", function (img) {
     backgroundImgs.push(img);
   });
 
@@ -114,9 +130,26 @@ function setup() {
 function draw() {
   
   // draw all background images NOTE: replace this code as soon as different levels use different background
-  backgroundImgs.forEach((x) => {
+  /*backgroundImgs.forEach((x) => {
     image(x, 0, 0, width, height);
-  });
+  });*/
+
+  if(currentLevel == 1){
+    image(backgroundImgs[0], 0, 0, width, height);
+  }
+  else if(currentLevel == 2){
+    image(backgroundImgs[1], 0, 0, width, height);
+  }
+  else if(currentLevel == 3){
+    image(backgroundImgs[2], 0, 0, width, height);
+  }
+  else if(currentLevel == 4){
+    image(backgroundImgs[4], 0, 0, width, height);
+  }
+  else if(currentLevel == 5){
+    image(backgroundImgs[3], 0, 0, width, height);
+  }
+
 
   // draw all bodies and perform special functions (like rotation)
   drawBodies.forEach((x) => {
@@ -140,18 +173,9 @@ function draw() {
     if (characterBody) {
       characterBody.draw();
       //Placeholder Anforderungen für das Abspielen der verschiedenen Animationen
+      //Timer fürs Abrufen der Animationen einrichten?
+      
       if(key === "a"){
-        animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        loseAnim.frame = 0;
-        noteAnim.frame = 0;
-        thinkAnim.frame = 0;
-        waitAnim.frame = 0;
-        winAnim.frame = 0;
-        idleAnim.frame = 0;
-
-        playOnce(angryAnim);
-      }
-      else if(key === "b"){
         animation(noteAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
         angryAnim.frame = 0;
         loseAnim.frame = 0;
@@ -163,7 +187,7 @@ function draw() {
         playOnce(noteAnim);
         
       }
-      else if(key === "c"){
+      else if(key === "s"){
         animation(thinkAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
         angryAnim.frame = 0;
         loseAnim.frame = 0;
@@ -184,13 +208,22 @@ function draw() {
 
         playOnce(waitAnim);
       }
+      else if(key === "e"){
+        animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+        loseAnim.frame = 0;
+        noteAnim.frame = 0;
+        thinkAnim.frame = 0;
+        waitAnim.frame = 0;
+        winAnim.frame = 0;
+        idleAnim.frame = 0;
+
+        playOnce(angryAnim);
+      }
       else{
         //Idle Animation als Default
         playIdle();
-      }      
+      }
     }
-
-    
   }
 
   // draw post-it placement hint NOTE: Add svg body condition
@@ -217,6 +250,7 @@ function draw() {
 
   //Schwarzer Rahmen um Spielfeld
   strokeWeight(10);
+  stroke(0);
   noFill();
   rect(5,5,width-10,height-10);
 
@@ -225,7 +259,7 @@ function draw() {
   textStyle(BOLD);
   noStroke();
   fill(0);
-  text(gameState, width/2, height/2);
+  text(noteAnim.lastFrame+thinkAnim.lastFrame, width/2, height/2);
 
 }
 
@@ -251,9 +285,9 @@ function playIdle(){
   //Zurücksetzen aller Frames
   angryAnim.frame = 0;
   loseAnim.frame = 0;
-  noteAnim.frame = 0;
-  thinkAnim.frame = 0;
-  waitAnim.frame = 0;
+  //noteAnim.frame = 0;
+  //thinkAnim.frame = 0;
+  //waitAnim.frame = 0;
   winAnim.frame = 0;
 
   //zurücksetzen der Frame Werte für Neustart der spezifischen Animationen
