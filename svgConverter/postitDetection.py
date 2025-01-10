@@ -161,10 +161,8 @@ def get_relative_position(postit_rect, projection_rect):
     ], dtype='float32'))
     postit_center = np.mean(postit_rect, axis=0).reshape(-1, 1, 2)
     normalized_center = cv2.perspectiveTransform(postit_center, M)
-    
-    # Swap the x and y coordinates to invert the grid
-    x, y = normalized_center[0][0]
-    return y, x
+    return tuple(normalized_center[0][0])
+
 
 
 def write_position_to_json(x, y, color, filename="position_color.json"):
@@ -208,12 +206,43 @@ def validate_postit_with_drawing(image):
     min_edge_count = 500  # Adjust based on experimentation
 
     # Check if the edge count exceeds the minimum threshold
-    if edge_count > min_edge_count:
+    if edge_count > min_edge_count and contains_red_content(image):
         return True
     else:
         print("Validation failed: No significant drawing detected.")
         return False
 
+def contains_red_content(image):
+    """
+    Checks if the image contains significant red content.
+
+    Parameters:
+        image (ndarray): The image to check.
+
+    Returns:
+        bool: True if red content is detected, False otherwise.
+    """
+    # Convert to HSV for better color segmentation
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+
+    # Define HSV range for red
+    lower_red1 = np.array([0, 50, 50])
+    upper_red1 = np.array([10, 255, 255])
+    lower_red2 = np.array([170, 50, 50])
+    upper_red2 = np.array([180, 255, 255])
+
+    # Create masks for red
+    mask_red1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    mask_red2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    mask_red = cv2.bitwise_or(mask_red1, mask_red2)
+
+    # Count the number of red pixels
+    red_pixel_count = cv2.countNonZero(mask_red)
+
+    # Define a threshold for significant red content
+    min_red_pixel_count = 500  # Adjust based on experimentation
+
+    return red_pixel_count > min_red_pixel_count
 
 def detect_drawing(prev_frame, current_frame):
     diff = cv2.absdiff(prev_frame, current_frame)
@@ -274,6 +303,10 @@ def main():
                     postit_detected = True
                     postit_removed = False
 
+                elif postit_detected and drawing_detected and drawing_validated:
+                    postit_removed = False
+                    print("Post-it detected after valid drawing.")
+                    print("awaiting trigger.")
 
                 # Calculate relative position
                 postit_rect = np.array([point[0] for point in detect_postit_and_draw.last_contour], dtype="float32")
@@ -316,11 +349,9 @@ def main():
                     drawing_detected = True
                     no_movement_counter = 0
                     drawing_completed = True
-                    print("Drawing detected on Post-it.")
+                    print("Drawing detected on Post-it, verifying...")
                     if validate_postit_with_drawing(cropped):
                         print("Validation passed.")
-                        drawing_detected = True
-                        drawing_completed = True
                         drawing_validated = True
                         save_cropped_image(cropped)
                         write_position_to_json(stored_position[0], stored_position[1], detected_color)
@@ -346,12 +377,13 @@ def main():
 
                 prev_frame = gray_cropped
                 
-            elif postit_detected and drawing_completed and drawing_validated and not postit_removed:
+            elif postit_detected and drawing_completed and drawing_validated:
                 # Post-it was previously detected but is now missing
                 print("Post-it removed from the projection area.")
                 postit_removed = True
                 postit_detected = False
                 drawing_completed = False
+                drawing_validated = False
                 
                
                 file_path = os.path.join(output_directory, f"detected_postit.png")
@@ -378,6 +410,7 @@ def main():
             elif postit_removed and cropped is not None:
                 # Post-it is detected again after removal
                 print("New Post-it detected.")
+                postit_removed = False
                 postit_detected = True
                 postit_removed = False
                 # drawing_completed = False  # Reset drawing state for new Post-it
