@@ -149,7 +149,7 @@ def detect_postit_and_draw(frame, projection_area=None):
                     detected_color = color
                     detect_postit_and_draw.last_contour = approx
                     return warped, detected_color
-    return None, None
+    return None, detected_color
 
 def get_relative_position(postit_rect, projection_rect):
     width, height = 1.0, 1.0
@@ -203,10 +203,10 @@ def validate_postit_with_drawing(image):
     edge_count = cv2.countNonZero(edges)
 
     # Define thresholds for a valid drawing
-    min_edge_count = 500  # Adjust based on experimentation
+    min_edge_count = 100  # Adjust based on experimentation
 
     # Check if the edge count exceeds the minimum threshold
-    if edge_count > min_edge_count and contains_red_content(image):
+    if edge_count > min_edge_count:
         return True
     else:
         print("Validation failed: No significant drawing detected.")
@@ -240,7 +240,10 @@ def contains_red_content(image):
     red_pixel_count = cv2.countNonZero(mask_red)
 
     # Define a threshold for significant red content
-    min_red_pixel_count = 500  # Adjust based on experimentation
+    min_red_pixel_count = 90  # Adjust based on experimentation
+
+    if red_pixel_count >= min_red_pixel_count:
+        print("not enough red detected :(")
 
     return red_pixel_count > min_red_pixel_count
 
@@ -305,8 +308,8 @@ def main():
 
                 elif postit_detected and drawing_detected and drawing_validated:
                     postit_removed = False
-                    print("Post-it detected after valid drawing.")
-                    print("awaiting trigger.")
+                   #  print("Post-it detected after valid drawing.")
+                    # print("awaiting trigger.")
 
                 # Calculate relative position
                 postit_rect = np.array([point[0] for point in detect_postit_and_draw.last_contour], dtype="float32")
@@ -345,7 +348,7 @@ def main():
                     prev_frame = gray_cropped
                     continue
 
-                if detect_drawing(prev_frame, gray_cropped):
+                if detect_drawing(prev_frame, gray_cropped) and not drawing_detected:
                     drawing_detected = True
                     no_movement_counter = 0
                     drawing_completed = True
@@ -355,6 +358,9 @@ def main():
                         drawing_validated = True
                         save_cropped_image(cropped)
                         write_position_to_json(stored_position[0], stored_position[1], detected_color)
+
+                        file_path = os.path.join(output_directory, f"detected_postit.png")
+                        notify_svg_conversion(file_path, detected_color)
                 else:
                     if drawing_detected:
                         no_movement_counter += 1
@@ -377,7 +383,7 @@ def main():
 
                 prev_frame = gray_cropped
                 
-            elif postit_detected and drawing_completed and drawing_validated:
+            elif postit_detected and drawing_completed and drawing_validated and not postit_removed:
                 # Post-it was previously detected but is now missing
                 print("Post-it removed from the projection area.")
                 postit_removed = True
@@ -386,11 +392,11 @@ def main():
                 drawing_validated = False
                 
                
-                file_path = os.path.join(output_directory, f"detected_postit.png")
+                """ file_path = os.path.join(output_directory, f"detected_postit.png")
                 
-                
+                write_position_to_json(stored_position[0], stored_position[1], "yellow")
                 # Notify SVG converter
-                notify_svg_conversion(file_path, detected_color)
+                notify_svg_conversion(file_path, "yellow")
                
                 while True:
                     print("Press 'c' to continue or 'q' to quit...")
@@ -403,14 +409,14 @@ def main():
                     elif key == ord('q'):
                         cap.release()
                         cv2.destroyAllWindows()
-                        return
+                        return """
                 
              
 
             elif postit_removed and cropped is not None:
                 # Post-it is detected again after removal
                 print("New Post-it detected.")
-                postit_removed = False
+               
                 postit_detected = True
                 postit_removed = False
                 # drawing_completed = False  # Reset drawing state for new Post-it

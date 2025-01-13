@@ -172,7 +172,7 @@ function draw() {
                }
 
               
-                drawnSVG = new PolygonFromSVG(world, { x: pos.x, y: pos.y, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 2 }, { label: "drawnBody" , isStatic: bodyStatic});
+                drawnSVG = new PolygonFromSVG(world, { x: pos.x, y: pos.y, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 8 }, { label: "drawnBody" , isStatic: bodyStatic});
                 if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
                   console.log("collision of drawn body with level geometry");
                   drawnSVG.removeBody();

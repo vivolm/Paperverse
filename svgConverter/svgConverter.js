@@ -9,6 +9,31 @@ const redFilteredImagePath = "../output/red_filtered.png";
 const processedImagePath = "../output/processed.png";
 const outputSvg = "../output/output.svg";
 
+
+// Helper function to convert RGB to HSV
+function rgbToHsv(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    let h = 0, s = 0, v = max;
+
+    if (delta > 0) {
+        if (max === r) {
+            h = ((g - b) / delta + (g < b ? 6 : 0)) % 6;
+        } else if (max === g) {
+            h = (b - r) / delta + 2;
+        } else {
+            h = (r - g) / delta + 4;
+        }
+        h *= 60;
+        s = delta / max;
+    }
+
+    return [h, s, v];
+}
+
 // Function to extract red parts of the image
 async function extractRedParts(inputImage, outputImage) {
     console.log("Extracting red parts of the image...");
@@ -30,8 +55,9 @@ async function extractRedParts(inputImage, outputImage) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
-
-        if (r > 50 && g < 100 && b < 100) {
+    
+        // Detect red pixels
+        if (r > 15 && r > g * 1.3 && r > b * 1.3) {
             // Turn red pixels to black
             redMask[i] = 0;       // Red
             redMask[i + 1] = 0;   // Green
@@ -39,13 +65,27 @@ async function extractRedParts(inputImage, outputImage) {
             if (channels === 4) {
                 redMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
             }
-        } else {
-            // Turn non-red pixels to white
-            redMask[i] = 255;     // Red
-            redMask[i + 1] = 255; // Green
-            redMask[i + 2] = 255; // Blue
-            if (channels === 4) {
-                redMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
+        }
+        else {
+            const [h, s, v] = rgbToHsv(r, g, b);
+        
+            // Purple hue range: ~260° to 300°
+            if (h >= 260 && h <= 300 && s > 0.4 && v > 0.2) {
+                // Turn purple pixels to black
+                redMask[i] = 0;       // Red
+                redMask[i + 1] = 0;   // Green
+                redMask[i + 2] = 0;   // Blue
+                if (channels === 4) {
+                    redMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
+                }
+            } else {
+                // Non-purple pixels to white
+                redMask[i] = 255;     // Red
+                redMask[i + 1] = 255; // Green
+                redMask[i + 2] = 255; // Blue
+                if (channels === 4) {
+                    redMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
+                }
             }
         }
     }
