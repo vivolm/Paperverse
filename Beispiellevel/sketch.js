@@ -140,70 +140,78 @@ function draw() {
           pos.y !== lastPositionColor.y &&
           pos.color !== lastPositionColor.color
         ) {
-          // Log the changes to the console
           console.log('Position or color has changed:');
           console.log('New Position:', pos.x, pos.y);
           console.log('New Color:', pos.color);
-
-          // load the SVG and then simplify it
-          loadSVG("../output/output.svg")
-          .then((simplifiedSVG) => {
-            drawableSVG = simplifiedSVG;
-            // get all bodies to check for collision
-          let levelBodies = Composite.allBodies(world);
-
-          // map the positions to the actual screen
-          pos.x = map(pos.x, 0, 1, 0, width);
-          pos.y = map(pos.y, 0, 1, 0, height);
-          
-               if (svgShapes.length > 0) {
-               svgShapes.forEach((x) => {
-                   x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-                 });
-               }
-
-               svgShapes = []; // remove old SVG bodies from drawing logic
   
-               let bodyStatic;
-               if (pos.color === "blue") {
-                bodyStatic= true;
-               } else if (pos.color === "yellow") {
-                bodyStatic = false;
-               }
-
-              
-                drawnSVG = new PolygonFromSVG(world, { x: pos.x, y: pos.y, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 2 }, { label: "drawnBody" , isStatic: bodyStatic});
-                if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
-                  console.log("collision of drawn body with level geometry");
-                  drawnSVG.removeBody();
-                } else {
-                  svgShapes.push(drawnSVG);
-                }
-          })
-          .catch((error) => {
-            console.error(error);
-          });
-
-          
-               
-              
-             
-               
-          
+          // Load the SVG and then simplify it
+          loadSVG("../output/output.svg")
+            .then((simplifiedSVG) => {
+              drawableSVG = simplifiedSVG;
+  
+              // Get all level bodies to check for collisions
+              let levelBodies = Composite.allBodies(world);
+  
+              // Map the positions to the actual screen dimensions
+              pos.x = map(pos.x, 0, 1, 0, width);
+              pos.y = map(pos.y, 0, 1, 0, height);
+  
+              // **Potential Issue: Resetting SVG Shapes**
+              if (svgShapes.length > 0) {
+                svgShapes.forEach((x) => {
+                  x.removeBody(); // Limit SVG bodies to one, to tighten gameplay and prevent level workarounds
+                });
+              }
+  
+              // Clear the SVG shapes array for reuse
+              svgShapes = []; // **This clearing could be causing resets if not correctly managed**
+  
+              let bodyStatic;
+              if (pos.color === "blue") {
+                bodyStatic = true; // Static SVG for 'blue' color
+              } else if (pos.color === "yellow") {
+                bodyStatic = false; // Dynamic SVG for 'yellow' color
+              }
+  
+              // Create a new body for the drawn SVG and check collisions
+              drawnSVG = new PolygonFromSVG(
+                world,
+                {
+                  x: pos.x,
+                  y: pos.y,
+                  fromPath: drawableSVG[0], // Assumes the first path is used
+                  scale: 0.7,
+                  color: "white",
+                  stroke: "black",
+                  weight: 2,
+                },
+                { label: "drawnBody", isStatic: bodyStatic }
+              );
+  
+              // Check for collisions between the drawn SVG and level geometry
+              if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
+                console.log("Collision of drawn body with level geometry");
+                drawnSVG.removeBody(); // Remove body on collision
+              } else {
+                svgShapes.push(drawnSVG); // Add valid body to shapes array
+              }
+            })
+            .catch((error) => {
+              console.error(error);
+            });
+  
           // Update the last position color
           lastPositionColor = pos;
   
-          // Update the position of the relevant object (if necessary)
+          // Optionally update the character's position based on the SVG changes
           if (characterBody) {
             Body.setPosition(characterBody.body, { x: pos.x, y: pos.y });
-            // Optionally, update the color or do something else based on `pos.color`
-            // For example, if your characterBody has a color property:
-            // characterBody.color = pos.color; 
           }
         }
       });
     }
   }
+  
 
 }
 
@@ -298,7 +306,7 @@ function windowResized() {
 function createLevel(levelIndex, clear) {
   // delete all previously created and drawn bodies (e.g. on window resize, level change)
   if (clear) {
-    Matter.Composite.clear(world);
+    Matter.Composite.clear(world, true, true);
     drawBodies = [];
   }
   // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data

@@ -223,7 +223,19 @@ def detect_drawing(prev_frame, current_frame):
 
 
 def main():
-    cap = cv2.VideoCapture(2) #Webcam
+    cap = cv2.VideoCapture(1) #Number of the selected webcam. "0" is for inbuild webcam, "1" or "2" for other connected Cams
+    if not cap.isOpened():
+        print("Error: Could not open camera.")
+        return
+
+    # Set the exposure to achieve a shutter speed of 1/30
+    # You may need to adjust this value based on your camera
+    shutter_speed_value = -4  # Example value, adjust as needed
+    cap.set(cv2.CAP_PROP_EXPOSURE, shutter_speed_value)
+    
+    current_exposure = cap.get(cv2.CAP_PROP_EXPOSURE)
+    print("Current Exposure:", current_exposure)
+
     prev_frame = None
     drawing_detected = False
     no_movement_counter = 0
