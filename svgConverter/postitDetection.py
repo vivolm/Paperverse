@@ -265,6 +265,7 @@ def main():
     postit_removed = False
     drawing_completed = False
     drawing_validated = False
+    drawing_validatedTwo = False
      # Tolerance for temporary obstructions
 
 
@@ -348,7 +349,7 @@ def main():
                     prev_frame = gray_cropped
                     continue
 
-                if detect_drawing(prev_frame, gray_cropped) and not drawing_detected:
+                if detect_drawing(prev_frame, gray_cropped) and not drawing_detected and not drawing_validated:
                     drawing_detected = True
                     no_movement_counter = 0
                     drawing_completed = True
@@ -361,17 +362,29 @@ def main():
 
                         file_path = os.path.join(output_directory, f"detected_postit.png")
                         notify_svg_conversion(file_path, detected_color)
+                        """ while True:
+                            print("Press 'c' to continue or 'q' to quit...")
+                            key = cv2.waitKey(0) & 0xFF
+                            if key == ord('c'):
+                                drawing_detected = False
+                                no_movement_counter = 0
+                                prev_frame = None
+                                break
+                            elif key == ord('q'):
+                                cap.release()
+                                cv2.destroyAllWindows()
+                                return """
                 else:
                     if drawing_detected:
                         no_movement_counter += 1
 
-                if no_movement_counter >= movement_threshold and not drawing_validated:
+                if no_movement_counter >= movement_threshold and not drawing_validatedTwo:
                     print("Drawing completed! Validating image...")
                     if validate_postit_with_drawing(cropped):
                         print("Validation passed.")
                         drawing_detected = True
                         drawing_completed = True
-                        drawing_validated = True
+                        drawing_validatedTwo = True
                         
                         
 
