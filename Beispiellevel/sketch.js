@@ -1,3 +1,4 @@
+
 // matter.js module aliases
 const Engine = Matter.Engine,
   Runner = Matter.Runner,
@@ -55,7 +56,7 @@ let gameState = "runGame";
 let currentLevel = 1;
 let finalLevel = 5;
 
-//let audio = new Audio("./Assets/Angry.mp3");
+let angryAudio;
 
 function preload() {
   // load each background and push it to the backgrounds array (backgroundImgs)
@@ -66,7 +67,7 @@ function preload() {
   hgFour = loadImage("./Assets/04_HG.gif");
   hgFive = loadImage("./Assets/05_HG.gif");
 
-  /*loadImage("./Assets/02_HG.gif", function (img) {
+  loadImage("./Assets/02_HG.gif", function (img) {
     backgroundImgs.push(img);
   });
 
@@ -80,7 +81,7 @@ function preload() {
 
   loadImage("./Assets/05_HG.gif", function (img) {
     backgroundImgs.push(img);
-  });*/
+  });
 
   // load each animation
   angryAnim = loadAni("./Assets/Sprite_Angry.png", {width: 175, height: 248, frames: 11});
@@ -96,6 +97,8 @@ function preload() {
   gateHold = loadAni("./Assets/Sprite_Gate.png", {width: 175, height: 950, frames: [0]});
   gateAnim = loadAni("./Assets/Sprite_Gate.png", {width: 175, height: 950, frames: 8});
 
+  
+
   //set framerate with fps variable
   angryAnim.frameDelay = fps;
   idleAnim.frameDelay = fps;
@@ -107,14 +110,7 @@ function preload() {
 
   gateAnim.frameDelay = fps;
   walkAnim.frameDelay = fps;
-
-  //load Sounds q5 doesnt support GIFs was tun?
-  /*angrySound = loadSound("./Assets/Angry.mp3");
-  angrySound.volume = 0.4;*/
 }
-
-
-
 
 
 
@@ -153,7 +149,9 @@ function setup() {
 
 
 
-function draw() {  
+function draw() { 
+  
+  background(255);
 
  if(currentLevel == 1){
     image(hgOne, 0, 0, width, height);
@@ -254,6 +252,7 @@ function draw() {
         winAnim.frame = 0;
         idleAnim.frame = 0;
 
+        angryAudio.play();
         playOnce(angryAnim);
       }
       else{
@@ -290,14 +289,6 @@ function draw() {
   stroke(0);
   noFill();
   rect(5,5,width-10,height-10);
-
-  textSize(50);
-  textAlign(CENTER);
-  textStyle(BOLD);
-  noStroke();
-  fill(0);
-  text(noteAnim.lastFrame+thinkAnim.lastFrame, width/2, height/2);
-
 }
 
 
@@ -788,3 +779,4 @@ function pressButton(button) {
     Body.translate(button, { x: 0, y: -10 });
   }, 500); // Adjust the delay as needed
 }
+
