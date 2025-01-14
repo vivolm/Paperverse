@@ -56,7 +56,6 @@ let gameState = "runGame";
 let currentLevel = 1;
 let finalLevel = 5;
 
-let angryAudio;
 
 function preload() {
   // load each background and push it to the backgrounds array (backgroundImgs)
@@ -97,7 +96,6 @@ function preload() {
   gateHold = loadAni("./Assets/Sprite_Gate.png", {width: 175, height: 950, frames: [0]});
   gateAnim = loadAni("./Assets/Sprite_Gate.png", {width: 175, height: 950, frames: 8});
 
-  
 
   //set framerate with fps variable
   angryAnim.frameDelay = fps;
@@ -252,7 +250,6 @@ function draw() {
         winAnim.frame = 0;
         idleAnim.frame = 0;
 
-        angryAudio.play();
         playOnce(angryAnim);
       }
       else{
