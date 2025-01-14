@@ -351,15 +351,7 @@ function failScreen(){
     loseAnim.stop();
     gameState = "runGame";
 
-    currentLevel = 1;
-    createLevel(currentLevel, true);
-
-    if (svgShapes.length > 0) {
-      svgShapes.forEach((x) => {
-        x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-      });
-    }
-    svgShapes = []; // remove old SVG bodies from drawing logic
+    levelSetBack();
   }
 }
 
@@ -386,16 +378,8 @@ function winScreen(){
     gateAnim.loop();
     gameState = "runGame";
 
-    currentLevel++;
-    createLevel(currentLevel, true);
-
-    if (svgShapes.length > 0) {
-      svgShapes.forEach((x) => {
-        x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-      });
-    }
-    svgShapes = []; // remove old SVG bodies from drawing logic
-  }
+    levelChange();
+  } 
 }
 
 
@@ -499,13 +483,30 @@ function mousePressed() {
   }
 }*/
 
-function keyPressed() {
-  // change the current level on key press
-  if (key >= 1 && key <= finalLevel) {
-    createLevel(key, true);
-    currentLevel = key;
+function levelChange() {
+  currentLevel++;
+  createLevel(currentLevel, true);
+
+  if (svgShapes.length > 0) {
+    svgShapes.forEach((x) => {
+      x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+    });
   }
+  svgShapes = []; // remove old SVG bodies from drawing logic
 }
+
+function levelSetBack(){
+  currentLevel = 1;
+  createLevel(currentLevel, true);
+
+  if (svgShapes.length > 0) {
+    svgShapes.forEach((x) => {
+      x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+    });
+  }
+  svgShapes = []; // remove old SVG bodies from drawing logic
+}
+
 
 function windowResized() {
   resizeCanvas();
