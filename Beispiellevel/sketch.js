@@ -27,6 +27,7 @@ let characterBody;
 let spikeBall;
 let rotationSpeed = 0.0001;
 let isRotating = true;
+
 //Anim Var
 let angryAnim;
 let idleAnim;
@@ -35,10 +36,18 @@ let noteAnim;
 let thinkAnim;
 let waitAnim;
 let winAnim;
+
 //Framerate
 let fps = 9;
 let currentFrame = 0;
 let endFrame;
+
+//Hintergründe
+let hgOne;
+let hgTwo;
+let hgThree;
+let hgFour;
+let hgFive;
 
 
 // global game logic
@@ -46,13 +55,18 @@ let gameState = "runGame";
 let currentLevel = 1;
 let finalLevel = 5;
 
+//let audio = new Audio("./Assets/Angry.mp3");
+
 function preload() {
   // load each background and push it to the backgrounds array (backgroundImgs)
-  loadImage("./Assets/01_HG.gif", function (img) {
-    backgroundImgs.push(img);
-  });
+  
+  hgOne = loadImage("./Assets/01_HG.gif");
+  hgTwo = loadImage("./Assets/02_HG.gif");
+  hgThree = loadImage("./Assets/03_HG.gif");
+  hgFour = loadImage("./Assets/04_HG.gif");
+  hgFive = loadImage("./Assets/05_HG.gif");
 
-  loadImage("./Assets/02_HG.gif", function (img) {
+  /*loadImage("./Assets/02_HG.gif", function (img) {
     backgroundImgs.push(img);
   });
 
@@ -66,7 +80,7 @@ function preload() {
 
   loadImage("./Assets/05_HG.gif", function (img) {
     backgroundImgs.push(img);
-  });
+  });*/
 
   // load each animation
   angryAnim = loadAni("./Assets/Sprite_Angry.png", {width: 175, height: 248, frames: 11});
@@ -77,6 +91,11 @@ function preload() {
   waitAnim = loadAni("./Assets/Sprite_Wait.png", {width: 175, height: 248, frames: 10});
   winAnim = loadAni("./Assets/Sprite_Win.png", {width: 175, height: 248, frames: 13});
 
+  walkAnim = loadAni("./Assets/Gehen_Spritesheet.png", {width: 175, height: 248, frames: 4});
+
+  gateHold = loadAni("./Assets/Sprite_Gate.png", {width: 175, height: 950, frames: [0]});
+  gateAnim = loadAni("./Assets/Sprite_Gate.png", {width: 175, height: 950, frames: 8});
+
   //set framerate with fps variable
   angryAnim.frameDelay = fps;
   idleAnim.frameDelay = fps;
@@ -85,6 +104,13 @@ function preload() {
   thinkAnim.frameDelay = fps;
   waitAnim.frameDelay = fps;
   winAnim.frameDelay = fps;
+
+  gateAnim.frameDelay = fps;
+  walkAnim.frameDelay = fps;
+
+  //load Sounds q5 doesnt support GIFs was tun?
+  /*angrySound = loadSound("./Assets/Angry.mp3");
+  angrySound.volume = 0.4;*/
 }
 
 
@@ -127,38 +153,38 @@ function setup() {
 
 
 
-function draw() {
-  
-  // draw all background images NOTE: replace this code as soon as different levels use different background
-  /*backgroundImgs.forEach((x) => {
-    image(x, 0, 0, width, height);
-  });*/
+function draw() {  
 
-  if(currentLevel == 1){
-    image(backgroundImgs[0], 0, 0, width, height);
+ if(currentLevel == 1){
+    image(hgOne, 0, 0, width, height);
+    if(gameState === "runGame")
+    {
+      animation(gateHold, width/2+width/4, height/2);
+    }
+    if(gameState === "win"){
+      animation(gateAnim, width/2+width/4, height/2);
+      gateAnim.noLoop();
+    }
   }
   else if(currentLevel == 2){
-    image(backgroundImgs[1], 0, 0, width, height);
+    image(hgThree, 0, 0, width, height);
   }
   else if(currentLevel == 3){
-    image(backgroundImgs[2], 0, 0, width, height);
+    image(hgFour, 0, 0, width, height);
   }
   else if(currentLevel == 4){
-    image(backgroundImgs[4], 0, 0, width, height);
-  }
-  else if(currentLevel == 5){
-    image(backgroundImgs[3], 0, 0, width, height);
+    image(hgFive, 0, 0, width, height);
   }
 
 
   // draw all bodies and perform special functions (like rotation)
   drawBodies.forEach((x) => {
     x.draw();
-    if (x.options.label === "spikeBall") {
+    /*if (x.options.label === "spikeBall") {
       if (isRotating) {
         Body.rotate(x.body, radians(0.5));
       }
-    }
+    }*/
   });
 
   // draw the handdrawn svg shape
@@ -208,7 +234,18 @@ function draw() {
 
         playOnce(waitAnim);
       }
-      else if(key === "e"){
+      else if(key === "f"){
+        animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+        loseAnim.frame = 0;
+        noteAnim.frame = 0;
+        thinkAnim.frame = 0;
+        waitAnim.frame = 0;
+        winAnim.frame = 0;
+        idleAnim.frame = 0;
+
+        playOnce(angryAnim);
+      }
+      else if(key === "j"){
         animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
         loseAnim.frame = 0;
         noteAnim.frame = 0;
@@ -313,6 +350,16 @@ function failScreen(){
   else{
     loseAnim.stop();
     gameState = "runGame";
+
+    currentLevel = 1;
+    createLevel(currentLevel, true);
+
+    if (svgShapes.length > 0) {
+      svgShapes.forEach((x) => {
+        x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+      });
+    }
+    svgShapes = []; // remove old SVG bodies from drawing logic
   }
 }
 
@@ -335,7 +382,19 @@ function winScreen(){
   //return to idleState and runGame-Status
   else{
     winAnim.stop();
+    gateAnim.frame= 0;
+    gateAnim.loop();
     gameState = "runGame";
+
+    currentLevel++;
+    createLevel(currentLevel, true);
+
+    if (svgShapes.length > 0) {
+      svgShapes.forEach((x) => {
+        x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+      });
+    }
+    svgShapes = []; // remove old SVG bodies from drawing logic
   }
 }
 
@@ -455,9 +514,11 @@ function windowResized() {
 
 function createLevel(levelIndex, clear) {
   // delete all previously created and drawn bodies (e.g. on window resize, level change)
+  console.log(clear);
   if (clear) {
     Matter.Composite.clear(world);
     drawBodies = [];
+    console.log("cleared!");
   }
   // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data
   let levelDims = [
@@ -473,7 +534,7 @@ function createLevel(levelIndex, clear) {
     {
       dimensions: [
         // tutorial 2
-        { w: width, h: height / 1 / 5 },
+        { w: width, h: height / 5 },
         { w: width / 6, h: height / 12 },
         { w: width / 10, h: height / 14 },
       ],
@@ -481,17 +542,17 @@ function createLevel(levelIndex, clear) {
     {
       dimensions: [
         // level 1 bridge
-        { w: width / 2, h: height / 1 / 3 },
-        { w: width / 2.5, h: height / 1 / 3 },
+        { w: width / 2, h: height / 3 },
+        { w: width / 2.5, h: height / 3 },
         { w: 100, h: 50 },
       ],
     },
     {
       dimensions: [
         // level 2 ball
-        { w: width / 2, h: height / 1 / 3 },
-        { w: width / 3.5, h: height / 1 / 3 },
-        { w: width, h: height / 1 / 5 },
+        { w: width / 2, h: height / 3 },
+        { w: width / 3.5, h: height / 3 },
+        { w: width, h: height / 5 },
       ],
     },
     {
@@ -505,12 +566,6 @@ function createLevel(levelIndex, clear) {
 
   // set up data for each level (position, etc.), each array item corresponds to a level
   let levels = [
-    {
-      // tutorial 1
-      background: backgroundImgs[0],
-      terrain: [{ x: levelDims[1].dimensions[0].w / 2, y: height - levelDims[1].dimensions[0].h / 2, w: levelDims[1].dimensions[0].w, h: levelDims[1].dimensions[0].h }],
-      char: { x: levelDims[1].dimensions[0].w / 4, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
-    },
     {
       // tutorial 2
       background: backgroundImgs[0],
@@ -647,7 +702,7 @@ Events.on(engine, "collisionStart", function (event) {
     const pairs = event.pairs;
 
     // check win/lose conditions for bridge level
-    if (currentLevel == 3) {
+    if (currentLevel == 2) {
       let winSensors = [];
       let failSensors = [];
 
@@ -694,7 +749,7 @@ Events.on(engine, "collisionStart", function (event) {
           }
         });
       }
-    } else if (currentLevel == 2 || currentLevel == 5) {
+    } else if (currentLevel == 1 || currentLevel == 5) {
       // tutorial and puzzle button level
       const massThreshold = 10;
       const velocityThreshold = 10;
