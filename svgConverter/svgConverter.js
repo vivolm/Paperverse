@@ -14,7 +14,7 @@ async function preprocessImage(inputImage, color) {
     // Trim and normalize the color string
     const normalizedColor = color.trim().toLowerCase();
 
-    let brightnessFactor = (normalizedColor === 'blue') ? 2.9 : 1.4;
+    let brightnessFactor = (normalizedColor === 'blue') ? 2.9 : 1.3;
 
     console.log(`Detected ${normalizedColor} Post-it. Applying brightness: ${brightnessFactor}x`);
 
@@ -80,7 +80,7 @@ function watchForDrawing() {
                 .then(convertToSvg)
                 .catch(console.error);
         }
-    }, 1000); // Check every second
+    }, 500); // Check every second
 
     process.on('SIGINT', () => {
         clearInterval(interval);
