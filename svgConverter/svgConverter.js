@@ -1,57 +1,98 @@
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
-const { Potrace } = require('potrace');
 
 // Shared directory and file paths
 const sharedDir = "shared/";
 const flagFile = path.join(sharedDir, "ready_for_svg.txt");
-const processedImage = "../output/processed.png";
+const greenFilteredImagePath = "../output/green_filtered.png";
+const processedImagePath = "../output/processed.png";
 const outputSvg = "../output/output.svg";
 
-// Preprocess the image with different brightness based on color
-async function preprocessImage(inputImage, color) {
-    // Trim and normalize the color string
-    const normalizedColor = color.trim().toLowerCase();
+// Function to extract green parts of the image
+async function extractGreenParts(inputImage, outputImage) {
+    console.log("Extracting green parts of the image...");
 
-    let brightnessFactor = (normalizedColor === 'blue') ? 2.9 : 1.3;
+    const image = sharp(inputImage);
+    const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
 
-    console.log(`Detected ${normalizedColor} Post-it. Applying brightness: ${brightnessFactor}x`);
+    const width = info.width;
+    const height = info.height;
+    const channels = info.channels;
+
+    if (channels < 3) {
+        throw new Error("Input image must have at least 3 color channels (RGB).");
+    }
+
+    const greenMask = Buffer.alloc(width * height * channels);
+
+    for (let i = 0; i < data.length; i += channels) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+
+        // Detect green pixels
+        if (g > 10 && g > r  && g > b ) {
+            // Turn green pixels to black
+            greenMask[i] = 0;       // Red
+            greenMask[i + 1] = 0;   // Green
+            greenMask[i + 2] = 0;   // Blue
+            if (channels === 4) {
+                greenMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
+            }
+        } else {
+            // Turn non-green pixels to white
+            greenMask[i] = 255;     // Red
+            greenMask[i + 1] = 255; // Green
+            greenMask[i + 2] = 255; // Blue
+            if (channels === 4) {
+                greenMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
+            }
+        }
+    }
+
+    await sharp(greenMask, { raw: { width, height, channels } })
+        .toFile(outputImage);
+
+    console.log(`Green parts extracted and saved to ${outputImage}`);
+}
+
+// Preprocess the red-filtered image (e.g., flip, grayscale, etc.)
+async function preprocessImage(inputImage, outputImage) {
+    console.log("Preprocessing the image...");
 
     await sharp(inputImage)
         .greyscale()
-        .modulate({ brightness: brightnessFactor })
-        .normalise()
-        .toFile(processedImage);
+        .toFile(outputImage);
 
-    console.log('Image preprocessing complete.');
+    console.log(`Image preprocessing complete. Saved to ${outputImage}`);
 }
-// Convert the processed image to SVG using Potrace
+
+// Convert the processed image to SVG
 function convertToSvg() {
-    copyJsonFile();
+    const { Potrace } = require('potrace');
     const trace = new Potrace();
-    trace.loadImage(processedImage, function (err) {
+
+    trace.loadImage(processedImagePath, function (err) {
         if (err) throw err;
         fs.writeFileSync(outputSvg, trace.getSVG());
         console.log(`SVG saved as ${outputSvg}`);
+        copyJsonFile();
     });
 }
 
 function copyJsonFile() {
-
     let source = './shared/position_color.json';
     let destination = '../output/position_color.json';
 
     try {
-      fs.copyFileSync(source, destination);
-      console.log(`File copied from ${source} to ${destination}`);
+        fs.copyFileSync(source, destination);
+        console.log(`File copied from ${source} to ${destination}`);
     } catch (error) {
-      console.error('Error copying file:', error);
+        console.error('Error copying file:', error);
     }
-  }
-  
-  
-  
+}
+
 
 // Watch for the flag file
 function watchForDrawing() {
@@ -59,9 +100,8 @@ function watchForDrawing() {
 
     const interval = setInterval(() => {
         if (fs.existsSync(flagFile)) {
-            console.log("New drawing detected! Starting SVG conversion...");
+            console.log("New drawing detected! Starting processing...");
 
-            // Read the flag file content (image path and color)
             const content = fs.readFileSync(flagFile, 'utf8').trim();
             const [inputImage, color] = content.split(',');
 
@@ -72,15 +112,15 @@ function watchForDrawing() {
 
             console.log(`Processing file: ${inputImage}, Color: ${color}`);
 
-            // Remove the flag file to avoid duplicate processing
             fs.unlinkSync(flagFile);
 
-            // Process the image and convert to SVG
-            preprocessImage(inputImage, color)
+            // Process the image
+            extractGreenParts(inputImage, greenFilteredImagePath)
+                .then(() => preprocessImage(greenFilteredImagePath, processedImagePath))
                 .then(convertToSvg)
                 .catch(console.error);
         }
-    }, 500); // Check every second
+    }, 1000); // Check every second
 
     process.on('SIGINT', () => {
         clearInterval(interval);
@@ -89,4 +129,5 @@ function watchForDrawing() {
     });
 }
 
+// Start watching for the flag file
 watchForDrawing();
