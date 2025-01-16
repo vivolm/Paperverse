@@ -56,33 +56,20 @@ let gameState = "runGame";
 let currentLevel = 1;
 let finalLevel = 5;
 
+//Stickman
+let stevie;
 
-function preload() {
-  // load each background and push it to the backgrounds array (backgroundImgs)
-  
+
+function preload() {  
+  //load each background and store it in a variable
   hgOne = loadImage("./Assets/01_HG.gif");
   hgTwo = loadImage("./Assets/02_HG.gif");
   hgThree = loadImage("./Assets/03_HG.gif");
   hgFour = loadImage("./Assets/04_HG.gif");
   hgFive = loadImage("./Assets/05_HG.gif");
 
-  loadImage("./Assets/02_HG.gif", function (img) {
-    backgroundImgs.push(img);
-  });
 
-  loadImage("./Assets/03_HG.gif", function (img) {
-    backgroundImgs.push(img);
-  });
-
-  loadImage("./Assets/04_HG.gif", function (img) {
-    backgroundImgs.push(img);
-  });
-
-  loadImage("./Assets/05_HG.gif", function (img) {
-    backgroundImgs.push(img);
-  });
-
-  // load each animation
+  // load each animation and set frameDelay to 9 with fps variale
   angryAnim = loadAni("./Assets/Sprite_Angry.png", {width: 175, height: 248, frames: 11});
   idleAnim = loadAni("./Assets/Sprite_Idle.png", {width: 175, height: 248, frames: 18});
   loseAnim = loadAni("./Assets/Sprite_Lose.png", {width: 175, height: 248, frames: 17});
@@ -91,23 +78,26 @@ function preload() {
   waitAnim = loadAni("./Assets/Sprite_Wait.png", {width: 175, height: 248, frames: 10});
   winAnim = loadAni("./Assets/Sprite_Win.png", {width: 175, height: 248, frames: 13});
 
-  walkAnim = loadAni("./Assets/Gehen_Spritesheet.png", {width: 175, height: 248, frames: 4});
-
+  //Create Character Sprite with animation size
+  stevie = new Sprite(175, 248);
+  //Add every Animation to the Stevie Sprite
+  stevie.addAni("angry", angryAnim);
+  stevie.addAni("note", noteAnim);
+  stevie.addAni("think", thinkAnim);
+  stevie.addAni("wait", waitAnim);
+  
+  stevie.addAni("idle", idleAnim);
+  stevie.addAni("win", winAnim);
+  stevie.addAni("lose", loseAnim);
+  //Set fps for every animation in Stevie Sprite
+  stevie.anis.frameDelay = fps;
+ 
+  //Gate still and in motion for instance of winning
   gateHold = loadAni("./Assets/Sprite_Gate.png", {width: 175, height: 950, frames: [0]});
   gateAnim = loadAni("./Assets/Sprite_Gate.png", {width: 175, height: 950, frames: 8});
-
-
-  //set framerate with fps variable
-  angryAnim.frameDelay = fps;
-  idleAnim.frameDelay = fps;
-  loseAnim.frameDelay = fps;
-  noteAnim.frameDelay = fps;
-  thinkAnim.frameDelay = fps;
-  waitAnim.frameDelay = fps;
-  winAnim.frameDelay = fps;
-
   gateAnim.frameDelay = fps;
-  walkAnim.frameDelay = fps;
+
+  
 }
 
 
@@ -132,9 +122,6 @@ function setup() {
       console.error(error);
     });
 
-  // scale down the animation asset
-  //angryAnim.scale = 0.5; (mit passeder größe jetzt)
-
   createLevel(currentLevel);
 
   // run the physics engine
@@ -148,8 +135,9 @@ function setup() {
 
 
 function draw() { 
-  
-  background(255);
+  //Set Sprite Position to Correct Position within frame
+  stevie.x = characterBody.body.position.x;
+  stevie.y = characterBody.body.position.y;
 
  if(currentLevel == 1){
     image(hgOne, 0, 0, width, height);
@@ -173,14 +161,9 @@ function draw() {
   }
 
 
-  // draw all bodies and perform special functions (like rotation)
+  // draw all bodies
   drawBodies.forEach((x) => {
     x.draw();
-    /*if (x.options.label === "spikeBall") {
-      if (isRotating) {
-        Body.rotate(x.body, radians(0.5));
-      }
-    }*/
   });
 
   // draw the handdrawn svg shape
@@ -194,63 +177,26 @@ function draw() {
     // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
     if (characterBody) {
       characterBody.draw();
-      //Placeholder Anforderungen für das Abspielen der verschiedenen Animationen
-      //Timer fürs Abrufen der Animationen einrichten?
-      
-      if(key === "a"){
-        animation(noteAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        angryAnim.frame = 0;
-        loseAnim.frame = 0;
-        thinkAnim.frame = 0;
-        waitAnim.frame = 0;
-        winAnim.frame = 0;
-        idleAnim.frame = 0;
 
-        playOnce(noteAnim);
+      //Placeholder Anforderungen für das Abspielen der verschiedenen Animationen      
+      if(key === "a"){
+        stevie.changeAni("angry");
+        playOnce(angryAnim);
         
       }
       else if(key === "s"){
-        animation(thinkAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        angryAnim.frame = 0;
-        loseAnim.frame = 0;
-        noteAnim.frame = 0;
-        waitAnim.frame = 0;
-        winAnim.frame = 0;
-        idleAnim.frame = 0;
-
-        playOnce(thinkAnim);
+        stevie.changeAni("note");
+        playOnce(noteAnim);
       }
       else if(key === "d"){
-        animation(waitAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        angryAnim.frame = 0;
-        loseAnim.frame = 0;
-        noteAnim.frame = 0;
-        winAnim.frame = 0;
-        idleAnim.frame = 0;
-
-        playOnce(waitAnim);
+        stevie.changeAni("think");
+        playOnce(thinkAnim);
       }
+
+      //Condition einricht, wenn Männchen von SVG getroffen wird
       else if(key === "f"){
-        animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        loseAnim.frame = 0;
-        noteAnim.frame = 0;
-        thinkAnim.frame = 0;
-        waitAnim.frame = 0;
-        winAnim.frame = 0;
-        idleAnim.frame = 0;
-
-        playOnce(angryAnim);
-      }
-      else if(key === "j"){
-        animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        loseAnim.frame = 0;
-        noteAnim.frame = 0;
-        thinkAnim.frame = 0;
-        waitAnim.frame = 0;
-        winAnim.frame = 0;
-        idleAnim.frame = 0;
-
-        playOnce(angryAnim);
+        stevie.changeAni("wait");
+        playOnce(waitAnim);
       }
       else{
         //Idle Animation als Default
@@ -289,7 +235,7 @@ function draw() {
 }
 
 
-//Play Animation once then return back to idle state until key is called
+//Play Animation once then return back to idle state until key is called - funktioniert auch it sprite
 function playOnce(aniTitle){
   endFrame = aniTitle.lastFrame;
   //play Animation only once
@@ -304,15 +250,16 @@ function playOnce(aniTitle){
   }
 }
 
+
 function playIdle(){
-  animation(idleAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+  stevie.changeAni("idle");
 
   //Zurücksetzen aller Frames
   angryAnim.frame = 0;
   loseAnim.frame = 0;
-  //noteAnim.frame = 0;
-  //thinkAnim.frame = 0;
-  //waitAnim.frame = 0;
+  noteAnim.frame = 0;
+  thinkAnim.frame = 0;
+  waitAnim.frame = 0;
   winAnim.frame = 0;
 
   //zurücksetzen der Frame Werte für Neustart der spezifischen Animationen
@@ -322,7 +269,7 @@ function playIdle(){
 
 function failScreen(){
   characterBody.draw();
-  animation(loseAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+  stevie.changeAni("lose");
 
   textAlign(CENTER);
   textSize(350);
@@ -346,7 +293,7 @@ function failScreen(){
 
 function winScreen(){
   characterBody.draw();
-  animation(winAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+  stevie.changeAni("win");
 
   textAlign(CENTER);
   textSize(350);
@@ -367,7 +314,7 @@ function winScreen(){
     gameState = "runGame";
 
     levelChange();
-  } 
+  }
 }
 
 
@@ -575,7 +522,7 @@ function createLevel(levelIndex, clear) {
           type: "button",
         },
       ],
-      char: { x: levelDims[2].dimensions[0].w / 4, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      char: { x: levelDims[2].dimensions[0].w / 4, y: height / 2, w: idleAnim.width * levelDims[0].character.scale, h: idleAnim.height * levelDims[0].character.scale },
     },
     {
       // level 1 bridge
@@ -601,7 +548,7 @@ function createLevel(levelIndex, clear) {
           type: "win",
         },
       ],
-      char: { x: levelDims[3].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      char: { x: levelDims[3].dimensions[0].w / 2, y: height / 2, w: idleAnim.width * levelDims[0].character.scale, h: idleAnim.height * levelDims[0].character.scale },
     },
     {
       // level 2 ball
@@ -618,7 +565,7 @@ function createLevel(levelIndex, clear) {
           r: ((width - levelDims[4].dimensions[0].w - levelDims[4].dimensions[1].w) / 2) * 0.7,
         },
       ],
-      char: { x: levelDims[4].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      char: { x: levelDims[4].dimensions[0].w / 2, y: height / 2, w: idleAnim.width * levelDims[0].character.scale, h: idleAnim.height * levelDims[0].character.scale },
     },
     {
       // level 3 button
@@ -627,7 +574,7 @@ function createLevel(levelIndex, clear) {
         { x: width - levelDims[5].dimensions[0].w / 2, y: levelDims[5].dimensions[0].h / 2, w: levelDims[5].dimensions[0].w, h: levelDims[5].dimensions[0].h },
         { x: levelDims[5].dimensions[1].w / 2, y: height - levelDims[5].dimensions[1].h / 2, w: levelDims[5].dimensions[1].w, h: levelDims[5].dimensions[1].h },
       ],
-      char: { x: levelDims[5].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      char: { x: levelDims[5].dimensions[0].w / 2, y: height / 2, w: idleAnim.width * levelDims[0].character.scale, h: idleAnim.height * levelDims[0].character.scale },
     },
   ];
 
