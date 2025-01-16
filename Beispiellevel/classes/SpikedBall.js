@@ -4,16 +4,25 @@ class SpikedBall extends Ball {
   }
 
   addBody() {
-    this.circleBody = Matter.Bodies.circle(this.attributes.x, this.attributes.y, this.attributes.r, this.options);
+    this.circleBody = Matter.Bodies.circle(
+      this.attributes.x,
+      this.attributes.y,
+      this.attributes.r,
+      this.options
+    );
     const spikeCount = 12;
     this.spikeBodies = this.createSpikes(spikeCount);
 
     this.body = Matter.Body.create({
       parts: [this.circleBody, ...this.spikeBodies],
       isStatic: true,
+      label: this.options.label,
     });
 
-    Matter.Body.setCentre(this.body, { x: this.circleBody.position.x, y: this.circleBody.position.y });
+    Matter.Body.setCentre(this.body, {
+      x: this.circleBody.position.x,
+      y: this.circleBody.position.y,
+    });
   }
 
   createSpikes(spikeCount) {
@@ -26,10 +35,16 @@ class SpikedBall extends Ball {
 
     for (let i = 0; i < spikeCount; i++) {
       const angle = spikeAngle * i;
-      const baseX = this.circleBody.position.x + this.attributes.r * Math.cos(angle);
-      const baseY = this.circleBody.position.y + this.attributes.r * Math.sin(angle);
-      const tipX = this.circleBody.position.x + (this.attributes.r + spikeLength) * Math.cos(angle);
-      const tipY = this.circleBody.position.y + (this.attributes.r + spikeLength) * Math.sin(angle);
+      const baseX =
+        this.circleBody.position.x + this.attributes.r * Math.cos(angle);
+      const baseY =
+        this.circleBody.position.y + this.attributes.r * Math.sin(angle);
+      const tipX =
+        this.circleBody.position.x +
+        (this.attributes.r + spikeLength) * Math.cos(angle);
+      const tipY =
+        this.circleBody.position.y +
+        (this.attributes.r + spikeLength) * Math.sin(angle);
 
       // Create a triangle for the spike
       const spike = Matter.Bodies.fromVertices(
@@ -43,20 +58,15 @@ class SpikedBall extends Ball {
         {
           angle: angle + Math.PI / 2,
           isStatic: true, // Make spikes dynamic
-          //   collisionFilter: {
-          //     group: -1, // Optional: Set a collision group if needed
-          //   },
         }
       );
 
       // Translate the spike to its base position
       Matter.Body.setPosition(spike, { x: baseX, y: baseY });
 
-      if (!(i >= 6 && i <= 8)) {
+      if (!(i >= 6 && i <= 8) && !(i >= 0 && i <= 2)) {
         this.spikes.push(spike); // Add spike to the spikes array
       }
-
-      //   Matter.Composite.add(compBody, spike); // Add spike to the compound body
     }
     return this.spikes;
   }
