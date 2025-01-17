@@ -171,7 +171,7 @@ def detect_drawing(prev_frame, current_frame):
     diff = cv2.absdiff(prev_frame, current_frame)
     _, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
     non_zero_pixels = cv2.countNonZero(thresh)
-    return non_zero_pixels > 400
+    return non_zero_pixels > 100
 
 
 def main():
@@ -179,7 +179,7 @@ def main():
     prev_frame = None
     drawing_detected = False
     no_movement_counter = 0
-    movement_threshold = 10
+    movement_threshold = 5
 
      # Initialize smoothing variables for relative position
     alpha = 0.2  # Smoothing factor for EMA (0 < alpha <= 1)
@@ -207,7 +207,7 @@ def main():
             # Display debug text
             cv2.putText(frame, "Projection Area Detected", (10, 50),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-
+            
 
         if cropped is not None and projection_area is not None:
             
@@ -259,34 +259,34 @@ def main():
                     no_movement_counter += 1
             
             if no_movement_counter >= movement_threshold:
-                print("Drawing detected! Validating image...")
-                if validate_postit_with_drawing(cropped):
-                    print("Validation passed. Saving image...")
-                    
-                    file_path = os.path.join(output_directory, f"detected_postit.png")
-                    cv2.imwrite(file_path, cropped)
-                    print(f"Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
+                """ print("Drawing detected! Validating image...")
+                if validate_postit_with_drawing(cropped): 
+                print("Validation passed. Saving image...")"""
+                
+                file_path = os.path.join(output_directory, f"detected_postit.png")
+                cv2.imwrite(file_path, cropped)
+                print(f"Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
 
-                    # Notify SVG converter
-                    notify_svg_conversion(file_path, detected_color, stored_position)
+                # Notify SVG converter
+                notify_svg_conversion(file_path, detected_color, stored_position)
 
-                    while True:
-                        print("Press 'c' to continue or 'q' to quit...")
-                        key = cv2.waitKey(0) & 0xFF
-                        if key == ord('c'):
-                            drawing_detected = False
-                            no_movement_counter = 0
-                            prev_frame = None
-                            break
-                        elif key == ord('q'):
-                            cap.release()
-                            cv2.destroyAllWindows()
-                            return
-                else:
+                while True:
+                    print("Press 'c' to continue or 'q' to quit...")
+                    key = cv2.waitKey(0) & 0xFF
+                    if key == ord('c'):
+                        drawing_detected = False
+                        no_movement_counter = 0
+                        prev_frame = None
+                        break
+                    elif key == ord('q'):
+                        cap.release()
+                        cv2.destroyAllWindows()
+                        return
+                """ else:
                     print("Validation failed. Discarding image.")
                     drawing_detected = False
-                    no_movement_counter = 0
-
+                    no_movement_counter = 0"""
+ 
             prev_frame = gray_cropped
 
         cv2.imshow("Webcam", frame)
