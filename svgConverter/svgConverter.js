@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const sharp = require('sharp');
+const fs = require("fs");
+const path = require("path");
+const sharp = require("sharp");
 
 // Shared directory and file paths
 const sharedDir = "shared/";
@@ -12,159 +12,166 @@ const outputSvg = "../output/output.svg";
 
 // Function to extract red parts of the image
 async function extractRedParts(inputImage, outputImage) {
-    console.log("Extracting red parts of the image...");
+  console.log("Extracting red parts of the image...");
 
-    const image = sharp(inputImage);
-    const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
+  const image = sharp(inputImage);
+  const { data, info } = await image
+    .raw()
+    .toBuffer({ resolveWithObject: true });
 
-    const width = info.width;
-    const height = info.height;
-    const channels = info.channels;
+  const width = info.width;
+  const height = info.height;
+  const channels = info.channels;
 
-    if (channels < 3) {
-        throw new Error("Input image must have at least 3 color channels (RGB).");
+  if (channels < 3) {
+    throw new Error("Input image must have at least 3 color channels (RGB).");
+  }
+
+  const redMask = Buffer.alloc(width * height * channels);
+
+  for (let i = 0; i < data.length; i += channels) {
+    const r = data[i];
+    const g = data[i + 1];
+    const b = data[i + 2];
+
+    // Detect red pixels
+    if (r > 10 && r > g * 1.3 && r > b * 1.3) {
+      // Turn red pixels to black
+      redMask[i] = 0; // Red
+      redMask[i + 1] = 0; // Green
+      redMask[i + 2] = 0; // Blue
+      if (channels === 4) {
+        redMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
+      }
+    } else {
+      // Turn non-red pixels to white
+      redMask[i] = 255; // Red
+      redMask[i + 1] = 255; // Green
+      redMask[i + 2] = 255; // Blue
+      if (channels === 4) {
+        redMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
+      }
     }
+  }
 
-    const redMask = Buffer.alloc(width * height * channels);
+  await sharp(redMask, { raw: { width, height, channels } }).toFile(
+    outputImage
+  );
 
-    for (let i = 0; i < data.length; i += channels) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
-
-        // Detect red pixels
-        if (r > 10 && r > g * 1.3 && r > b * 1.3) {
-            // Turn red pixels to black
-            redMask[i] = 0;       // Red
-            redMask[i + 1] = 0;   // Green
-            redMask[i + 2] = 0;   // Blue
-            if (channels === 4) {
-                redMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
-            }
-        } else {
-            // Turn non-red pixels to white
-            redMask[i] = 255;     // Red
-            redMask[i + 1] = 255; // Green
-            redMask[i + 2] = 255; // Blue
-            if (channels === 4) {
-                redMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
-            }
-        }
-    }
-
-    await sharp(redMask, { raw: { width, height, channels } })
-        .toFile(outputImage);
-
-    console.log(`Red parts extracted and saved to ${outputImage}`);
+  console.log(`Red parts extracted and saved to ${outputImage}`);
 }
 
 // Function to simplify the image after red masking
 async function simplifyImage(inputImage, outputImage) {
-    console.log("Simplifying the image to ensure closed forms...");
+  console.log("Simplifying the image to ensure closed forms...");
 
-    const image = sharp(inputImage);
+  const image = sharp(inputImage);
 
-    // Convert to grayscale (if not already)
-    const grayImage = await image
-        .greyscale()
-        .raw()
-        .toBuffer({ resolveWithObject: true });
+  // Convert to grayscale (if not already)
+  const grayImage = await image
+    .greyscale()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
 
-    const { data, info } = grayImage;
-    const width = info.width;
-    const height = info.height;
-    const channels = info.channels;
+  const { data, info } = grayImage;
+  const width = info.width;
+  const height = info.height;
+  const channels = info.channels;
 
-    const simplifiedMask = Buffer.alloc(width * height * channels);
+  const simplifiedMask = Buffer.alloc(width * height * channels);
 
-    // Simplify the image using basic morphological operations
-    for (let i = 0; i < data.length; i += channels) {
-        const pixel = data[i];
+  // Simplify the image using basic morphological operations
+  for (let i = 0; i < data.length; i += channels) {
+    const pixel = data[i];
 
-        // Apply binary thresholding
-        simplifiedMask[i] = pixel < 128 ? 0 : 255; // Black for low intensity, white for high
-        if (channels === 4) {
-            simplifiedMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
-        }
+    // Apply binary thresholding
+    simplifiedMask[i] = pixel < 128 ? 0 : 255; // Black for low intensity, white for high
+    if (channels === 4) {
+      simplifiedMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
     }
+  }
 
-    // Save the simplified image
-    await sharp(simplifiedMask, { raw: { width, height, channels } })
-        .toFile(outputImage);
+  // Save the simplified image
+  await sharp(simplifiedMask, { raw: { width, height, channels } }).toFile(
+    outputImage
+  );
 
-    console.log(`Image simplified and saved to ${outputImage}`);
+  console.log(`Image simplified and saved to ${outputImage}`);
 }
 
 // Preprocess the red-filtered image (e.g., flip, grayscale, etc.)
 async function preprocessImage(inputImage, outputImage) {
-    console.log("Preprocessing the image...");
+  console.log("Preprocessing the image...");
 
-    await sharp(inputImage)
-        .greyscale()
-        .toFile(outputImage);
+  await sharp(inputImage).greyscale().toFile(outputImage);
 
-    console.log(`Image preprocessing complete. Saved to ${outputImage}`);
+  console.log(`Image preprocessing complete. Saved to ${outputImage}`);
 }
 
 // Convert the processed image to SVG
 function convertToSvg() {
-    const { Potrace } = require('potrace');
-    const trace = new Potrace();
+  const { Potrace } = require("potrace");
+  const trace = new Potrace();
 
-    trace.loadImage(processedImagePath, function (err) {
-        if (err) throw err;
-        fs.writeFileSync(outputSvg, trace.getSVG());
-        console.log(`SVG saved as ${outputSvg}`);
-        copyJsonFile();
-    });
+  trace.loadImage(processedImagePath, function (err) {
+    if (err) throw err;
+    // fs.writeFileSync(outputSvg, trace.getSVG());
+    // console.log(`SVG saved as ${outputSvg}`);
+    // copyJsonFile();
+    const data = {
+      svgPath: trace.getSVG(),
+    };
+    const event = new CustomEvent("svgReady", data);
+    window.dispatchEvent(event);
+  });
 }
 
 function copyJsonFile() {
-    let source = './shared/position_color.json';
-    let destination = '../output/position_color.json';
+  let source = "./shared/position_color.json";
+  let destination = "../output/position_color.json";
 
-    try {
-        fs.copyFileSync(source, destination);
-        console.log(`File copied from ${source} to ${destination}`);
-    } catch (error) {
-        console.error('Error copying file:', error);
-    }
+  try {
+    fs.copyFileSync(source, destination);
+    console.log(`File copied from ${source} to ${destination}`);
+  } catch (error) {
+    console.error("Error copying file:", error);
+  }
 }
 
 // Watch for the flag file
 function watchForDrawing() {
-    console.log("Watching for new drawing...");
+  console.log("Watching for new drawing...");
 
-    const interval = setInterval(() => {
-        if (fs.existsSync(flagFile)) {
-            console.log("New drawing detected! Starting processing...");
+  const interval = setInterval(() => {
+    if (fs.existsSync(flagFile)) {
+      console.log("New drawing detected! Starting processing...");
 
-            const content = fs.readFileSync(flagFile, 'utf8').trim();
-            const [inputImage, color] = content.split(',');
+      const content = fs.readFileSync(flagFile, "utf8").trim();
+      const [inputImage, color] = content.split(",");
 
-            if (!inputImage || !color) {
-                console.error("Invalid flag file format. Expected: 'path, color'");
-                return;
-            }
+      if (!inputImage || !color) {
+        console.error("Invalid flag file format. Expected: 'path, color'");
+        return;
+      }
 
-            console.log(`Processing file: ${inputImage}, Color: ${color}`);
+      console.log(`Processing file: ${inputImage}, Color: ${color}`);
 
-            fs.unlinkSync(flagFile);
+      fs.unlinkSync(flagFile);
 
-            // Process the image
-            extractRedParts(inputImage, redFilteredImagePath)
-                .then(() => simplifyImage(redFilteredImagePath, simplifiedImagePath))
-                .then(() => preprocessImage(simplifiedImagePath, processedImagePath))
-                .then(convertToSvg)
-                .catch(console.error);
-        }
-    }, 1000); // Check every second
+      // Process the image
+      extractRedParts(inputImage, redFilteredImagePath)
+        .then(() => simplifyImage(redFilteredImagePath, simplifiedImagePath))
+        .then(() => preprocessImage(simplifiedImagePath, processedImagePath))
+        .then(convertToSvg)
+        .catch(console.error);
+    }
+  }, 1000); // Check every second
 
-    process.on('SIGINT', () => {
-        clearInterval(interval);
-        console.log("\nStopping watcher.");
-        process.exit();
-    });
+  process.on("SIGINT", () => {
+    clearInterval(interval);
+    console.log("\nStopping watcher.");
+    process.exit();
+  });
 }
 
 // Start watching for the flag file

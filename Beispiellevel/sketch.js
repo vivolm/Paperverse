@@ -63,8 +63,6 @@ function setup() {
   const canvas = createCanvas(windowWidth, windowHeight + 10);
   canvas.parent("sketch-holder");
 
- 
-
   // set paper.js working space to p5.js canvas
   canvas.id("myCanvas");
   paper.setup("myCanvas");
@@ -159,73 +157,75 @@ function draw() {
           pos.color !== lastPositionColor.color
         ) {
           // Log the changes to the console
-          console.log('Position or color has changed:');
-          console.log('New Position:', pos.x, pos.y);
-          console.log('New Color:', pos.color);
+          console.log("Position or color has changed:");
+          console.log("New Position:", pos.x, pos.y);
+          console.log("New Color:", pos.color);
 
           // load the SVG and then simplify it
           loadSVG("../output/output.svg")
-          .then((simplifiedSVG) => {
-            drawableSVG = simplifiedSVG;
-            // get all bodies to check for collision
-          let levelBodies = Composite.allBodies(world);
+            .then((simplifiedSVG) => {
+              drawableSVG = simplifiedSVG;
+              // get all bodies to check for collision
+              let levelBodies = Composite.allBodies(world);
 
-          // map the positions to the actual screen
-          pos.x = map(pos.x, 0, 1, 0, width);
-          pos.y = map(pos.y, 0, 1, 0, height);
-          
-               if (svgShapes.length > 0) {
-               svgShapes.forEach((x) => {
-                   x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-                 });
-               }
+              // map the positions to the actual screen
+              pos.x = map(pos.x, 0, 1, 0, width);
+              pos.y = map(pos.y, 0, 1, 0, height);
 
-               svgShapes = []; // remove old SVG bodies from drawing logic
-  
-               let bodyStatic;
-               if (pos.color === "blue") {
-                bodyStatic= true;
-               } else if (pos.color === "yellow") {
+              if (svgShapes.length > 0) {
+                svgShapes.forEach((x) => {
+                  x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+                });
+              }
+
+              svgShapes = []; // remove old SVG bodies from drawing logic
+
+              let bodyStatic;
+              if (pos.color === "blue") {
+                bodyStatic = true;
+              } else if (pos.color === "yellow") {
                 bodyStatic = false;
-               }
+              }
 
-              
-                drawnSVG = new PolygonFromSVG(world, { x: pos.x, y: pos.y, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 6 }, { label: "drawnBody" , isStatic: bodyStatic});
-                if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
-                  console.log("collision of drawn body with level geometry");
-                  drawnSVG.removeBody();
-                } else {
-                  svgShapes.push(drawnSVG);
-                }
-          })
-          .catch((error) => {
-            console.error(error);
-          });
+              drawnSVG = new PolygonFromSVG(
+                world,
+                {
+                  x: pos.x,
+                  y: pos.y,
+                  fromPath: drawableSVG[0],
+                  scale: 0.7,
+                  color: "white",
+                  stroke: "black",
+                  weight: 6,
+                },
+                { label: "drawnBody", isStatic: bodyStatic }
+              );
+              if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
+                console.log("collision of drawn body with level geometry");
+                drawnSVG.removeBody();
+              } else {
+                svgShapes.push(drawnSVG);
+              }
+            })
+            .catch((error) => {
+              console.error(error);
+            });
 
-          
-               
-              
-             
-               
-          
           // Update the last position color
           lastPositionColor = pos;
-  
+
           // Update the position of the relevant object (if necessary)
           if (characterBody) {
             Body.setPosition(characterBody.body, { x: pos.x, y: pos.y });
             // Optionally, update the color or do something else based on `pos.color`
             // For example, if your characterBody has a color property:
-            // characterBody.color = pos.color; 
+            // characterBody.color = pos.color;
           }
         }
       });
     }
   }
-
 }
-
-
 
 function loadSVG(url) {
   return new Promise((resolve, reject) => {
@@ -800,3 +800,7 @@ function pressButton(button) {
     Body.translate(button, { x: 0, y: -10 });
   }, 500); // Adjust the delay as needed
 }
+
+window.addEventListener("svgReady", (ev) => {
+  console.log(ev.data);
+});
