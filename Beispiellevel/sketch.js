@@ -60,9 +60,10 @@ function setup() {
   resizeCanvas(windowWidth, windowHeight + 10);
 
   // load the SVG and then simplify it
-  loadSVG("./SVG/output.svg")
+  loadSVG("./SVG/Round.svg")
     .then((simplifiedSVG) => {
       drawableSVG = simplifiedSVG;
+      console.log(drawableSVG);
     })
     .catch((error) => {
       console.error(error);
@@ -180,58 +181,43 @@ function loadSVG(url) {
 }
 
 function mousePressed() {
-  // if (gameState === "runGame") {
-  //   if (svgShapes.length > 0) {
-  //     svgShapes.forEach((x) => {
-  //       x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-  //     });
-  //   }
-  //   svgShapes = []; // remove old SVG bodies from drawing logic
-  //   drawnSVG = new PolygonFromSVG(world, { x: mouseX, y: mouseY, fromPath: drawableSVG[0], color: "white", stroke: "black", weight: 2 }, { label: "drawnBody" });
-  //   svgShapes.push(drawnSVG);
-  // }
+  if (gameState === "runGame") {
+    getDrawPosition().then((pos) => {
+      let drawnSVG;
+      let levelBodies = Composite.allBodies(world);
+      pos.x = map(pos.x, 0, 1, 0, width);
+      pos.y = map(pos.y, 0, 1, 0, height);
 
-  getDrawPosition().then((pos) => {
-    let testBlock;
-    let levelBodies = Composite.allBodies(world);
-    pos.x = map(pos.x, 0, 1, 0, width);
-    pos.y = map(pos.y, 0, 1, 0, height);
-    if (pos.color === "yellow") {
-      testBlock = new Block(
-        world,
-        {
-          x: mouseX,
-          y: mouseY,
-          w: 75,
-          h: 75,
-          color: "white",
-          stroke: "black",
-          weight: 2,
-        },
-        { isStatic: false, mass: 100, label: "test" }
-      );
-    } else if (pos.color === "blue") {
-      testBlock = new Block(
-        world,
-        {
-          x: mouseX,
-          y: mouseY,
-          w: 100,
-          h: 100,
-          color: "white",
-          stroke: "black",
-          weight: 2,
-        },
-        { isStatic: true, mass: 100, label: "test" }
-      );
-    }
-    if (Query.collides(testBlock.body, levelBodies).length > 0) {
-      console.log("collision of drawn body with level geometry");
-      testBlock.removeBody(world, testBlock);
-    } else {
-      drawBodies.push(testBlock);
-    }
-  });
+      if (pos.color === "yellow") {
+        if (svgShapes.length > 0) {
+          svgShapes.forEach((x) => {
+            x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+          });
+        }
+        svgShapes = []; // remove old SVG bodies from drawing logic
+
+        drawnSVG = new PolygonFromSVG(
+          world,
+          {
+            x: pos.x,
+            y: pos.y,
+            fromPath: drawableSVG[0],
+            color: "white",
+            stroke: "black",
+            weight: 2,
+          },
+          { isStatic: false, mass: 100, label: "drawnBody" }
+        );
+      }
+
+      if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
+        console.log("collision of drawn body with level geometry");
+        drawnSVG.removeBody(world, drawnSVG);
+      } else {
+        svgShapes.push(drawnSVG);
+      }
+    });
+  }
 }
 
 async function getDrawPosition() {
