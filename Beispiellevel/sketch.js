@@ -229,88 +229,39 @@ function draw() {
 }
 
 function loadSVG(url) {
-  return new Promise((resolve, reject) => {
-    // Ensure that the project is initialized before importing SVG
-    if (paper.project) {
-      paper.project.importSVG(url, (item) => {
-        if (item) {
-          // Create a new group to hold the simplified paths
-          const simplifiedGroup = new paper.Group();
-          const simplifyStrength = 5;
+  if (item) {
+    // Create a new group to hold the simplified paths
+    const simplifiedGroup = new paper.Group();
+    const simplifyStrength = 5;
 
-          // Process the loaded SVG item
-          item.children.forEach((child) => {
-            // simplify logic for different labels of paper.js objects (path, compound, shape)
-            if (child instanceof paper.Path) {
-              child.simplify(simplifyStrength);
-              simplifiedGroup.addChild(child);
-            } else if (child instanceof paper.CompoundPath) {
-              child.simplify(simplifyStrength);
-              simplifiedGroup.addChild(child);
-            } else if (child instanceof paper.Shape) {
-              console.log("Shape object ignored");
-            }
-          });
-
-          // Export the simplified group back to an SVG string
-          const svgString = simplifiedGroup.exportSVG({ asString: true });
-
-          // turn that string into a DOM element
-          const parser = new DOMParser();
-          const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-          const paths = svgDoc.getElementsByTagName("path");
-
-          // Resolve the promise with the simplified SVG path data
-          resolve(paths);
-        } else {
-          reject("Failed to load SVG");
-        }
-      });
-    } else {
-      reject("Paper.js project is not initialized");
-    }
-  });
-}
-
-function mousePressed() {
-  if (gameState === "runGame") {
-    getDrawPosition().then((pos) => {
-      let drawnSVG;
-      let levelBodies = Composite.allBodies(world);
-      pos.x = map(pos.x, 0, 1, 0, width);
-      pos.y = map(pos.y, 0, 1, 0, height);
-
-      if (pos.color === "yellow") {
-        if (svgShapes.length > 0) {
-          svgShapes.forEach((x) => {
-            x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-          });
-        }
-        svgShapes = []; // remove old SVG bodies from drawing logic
-
-        drawnSVG = new PolygonFromSVG(
-          world,
-          {
-            x: pos.x,
-            y: pos.y,
-            fromPath: drawableSVG[0],
-            color: "white",
-            stroke: "black",
-            weight: 2,
-          },
-          { isStatic: false, mass: 100, label: "drawnBody" }
-        );
-      }
-
-      if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
-        console.log("collision of drawn body with level geometry");
-        drawnSVG.removeBody(world, drawnSVG);
-      } else {
-        svgShapes.push(drawnSVG);
+    // Process the loaded SVG item
+    item.children.forEach((child) => {
+      // simplify logic for different labels of paper.js objects (path, compound, shape)
+      if (child instanceof paper.Path) {
+        child.simplify(simplifyStrength);
+        simplifiedGroup.addChild(child);
+      } else if (child instanceof paper.CompoundPath) {
+        child.simplify(simplifyStrength);
+        simplifiedGroup.addChild(child);
+      } else if (child instanceof paper.Shape) {
+        console.log("Shape object ignored");
       }
     });
+
+    // Export the simplified group back to an SVG string
+    const svgString = simplifiedGroup.exportSVG({ asString: true });
+
+    // turn that string into a DOM element
+    const parser = new DOMParser();
+    const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
+    const paths = svgDoc.getElementsByTagName("path");
+
+    // Resolve the promise with the simplified SVG path data
+    resolve(paths);
   }
 }
+
+function mousePressed() {}
 
 async function getDrawPosition() {
   let position_color = {
@@ -802,10 +753,89 @@ function pressButton(button) {
   }, 500); // Adjust the delay as needed
 }
 
-socket.addEventListener("open", () => {
+/* socket.addEventListener("open", () => {
   console.log("Connected to WebSocket Server");
-});
+}); */
 
 socket.addEventListener("message", (ev) => {
-  console.log(ev.data);
+  const message = JSON.parse(ev.data);
+
+  switch (message.type) {
+    case "position":
+      // save position here
+      break;
+    case "svg":
+      // save svg here
+      break;
+  }
 });
+
+function createSVG() {
+  if (gameState === "runGame") {
+    if (item) {
+      // Create a new group to hold the simplified paths
+      const simplifiedGroup = new paper.Group();
+      const simplifyStrength = 5;
+
+      // Process the loaded SVG item
+      item.children.forEach((child) => {
+        // simplify logic for different labels of paper.js objects (path, compound, shape)
+        if (child instanceof paper.Path) {
+          child.simplify(simplifyStrength);
+          simplifiedGroup.addChild(child);
+        } else if (child instanceof paper.CompoundPath) {
+          child.simplify(simplifyStrength);
+          simplifiedGroup.addChild(child);
+        } else if (child instanceof paper.Shape) {
+          console.log("Shape object ignored");
+        }
+      });
+
+      // Export the simplified group back to an SVG string
+      const svgString = simplifiedGroup.exportSVG({ asString: true });
+
+      // turn that string into a DOM element
+      const parser = new DOMParser();
+      const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
+      const paths = svgDoc.getElementsByTagName("path");
+
+      // Resolve the promise with the simplified SVG path data
+      resolve(paths);
+    }
+    getDrawPosition().then((pos) => {
+      let drawnSVG;
+      let levelBodies = Composite.allBodies(world);
+      pos.x = map(pos.x, 0, 1, 0, width);
+      pos.y = map(pos.y, 0, 1, 0, height);
+
+      if (pos.color === "yellow") {
+        if (svgShapes.length > 0) {
+          svgShapes.forEach((x) => {
+            x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+          });
+        }
+        svgShapes = []; // remove old SVG bodies from drawing logic
+
+        drawnSVG = new PolygonFromSVG(
+          world,
+          {
+            x: pos.x,
+            y: pos.y,
+            fromPath: drawableSVG[0],
+            color: "white",
+            stroke: "black",
+            weight: 2,
+          },
+          { isStatic: false, mass: 100, label: "drawnBody" }
+        );
+      }
+
+      if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
+        console.log("collision of drawn body with level geometry");
+        drawnSVG.removeBody(world, drawnSVG);
+      } else {
+        svgShapes.push(drawnSVG);
+      }
+    });
+  }
+}
