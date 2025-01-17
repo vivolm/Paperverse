@@ -18,8 +18,6 @@ const world = engine.world;
 const runner = Runner.create();
 const socket = new WebSocket("ws://localhost:8080");
 
-
-
 // global variables for tracking bodies & assets
 let drawBodies = [];
 let svgShapes = [];
@@ -32,12 +30,16 @@ let leftBall;
 let rightBall;
 let leftRotating = true;
 let rightRotating = true;
+
 // global variable for data tracking
-let lastPositionColor = {
-  x: null,
-  y: null,
-  color: null,
-};
+// let lastPositionColor = {
+//   x: null,
+//   y: null,
+//   color: null,
+// };
+
+let positionData;
+let svgString;
 
 // global game logic
 let gameState = "runGame";
@@ -73,14 +75,14 @@ function setup() {
   resizeCanvas(windowWidth, windowHeight + 10);
 
   // load the SVG and then simplify it
-  loadSVG("./SVG/Round.svg")
-    .then((simplifiedSVG) => {
-      drawableSVG = simplifiedSVG;
-      console.log(drawableSVG);
-    })
-    .catch((error) => {
-      console.error(error);
-    });
+  // loadSVG("./SVG/Round.svg")
+  //   .then((simplifiedSVG) => {
+  //     drawableSVG = simplifiedSVG;
+  //     console.log(drawableSVG);
+  //   })
+  //   .catch((error) => {
+  //     console.error(error);
+  //   });
 
   // scale down the animation asset
   angryAnim.scale = 0.5;
@@ -230,64 +232,40 @@ function draw() {
   // }
 }
 
-function loadSVG(url) {
-  if (item) {
-    // Create a new group to hold the simplified paths
-    const simplifiedGroup = new paper.Group();
-    const simplifyStrength = 5;
+// function loadSVG(url) {
+//   if (item) {
+//     // Create a new group to hold the simplified paths
+//     const simplifiedGroup = new paper.Group();
+//     const simplifyStrength = 5;
 
-    // Process the loaded SVG item
-    item.children.forEach((child) => {
-      // simplify logic for different labels of paper.js objects (path, compound, shape)
-      if (child instanceof paper.Path) {
-        child.simplify(simplifyStrength);
-        simplifiedGroup.addChild(child);
-      } else if (child instanceof paper.CompoundPath) {
-        child.simplify(simplifyStrength);
-        simplifiedGroup.addChild(child);
-      } else if (child instanceof paper.Shape) {
-        console.log("Shape object ignored");
-      }
-    });
+//     // Process the loaded SVG item
+//     item.children.forEach((child) => {
+//       // simplify logic for different labels of paper.js objects (path, compound, shape)
+//       if (child instanceof paper.Path) {
+//         child.simplify(simplifyStrength);
+//         simplifiedGroup.addChild(child);
+//       } else if (child instanceof paper.CompoundPath) {
+//         child.simplify(simplifyStrength);
+//         simplifiedGroup.addChild(child);
+//       } else if (child instanceof paper.Shape) {
+//         console.log("Shape object ignored");
+//       }
+//     });
 
-    // Export the simplified group back to an SVG string
-    const svgString = simplifiedGroup.exportSVG({ asString: true });
+//     // Export the simplified group back to an SVG string
+//     const svgString = simplifiedGroup.exportSVG({ asString: true });
 
-    // turn that string into a DOM element
-    const parser = new DOMParser();
-    const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-    const paths = svgDoc.getElementsByTagName("path");
+//     // turn that string into a DOM element
+//     const parser = new DOMParser();
+//     const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
+//     const paths = svgDoc.getElementsByTagName("path");
 
-    // Resolve the promise with the simplified SVG path data
-    resolve(paths);
-  }
-}
+//     // Resolve the promise with the simplified SVG path data
+//     resolve(paths);
+//   }
+// }
 
 function mousePressed() {}
-
-async function getDrawPosition() {
-  let position_color = {
-    x: 0,
-    y: 0,
-    color: "",
-  };
-
-  // get the json file and return the positional and color values
-  try {
-    const response = await fetch("../output/position_color.json");
-    if (!response.ok) {
-      throw new Error("Network response was not ok");
-    }
-    const data = await response.json();
-
-    position_color.x = data.position.x;
-    position_color.y = data.position.y;
-    position_color.color = data.color;
-    return position_color; // Return the position/color object
-  } catch (error) {
-    console.error("There was a problem with the fetch operation:", error);
-  }
-}
 
 // Change the current level on key press
 function keyPressed() {
@@ -755,84 +733,94 @@ function pressButton(button) {
   }, 500); // Adjust the delay as needed
 }
 
-/* socket.addEventListener("open", () => {
+socket.addEventListener("open", () => {
   console.log("Connected to WebSocket Server");
   socket.send(JSON.stringify({ type: "browser" })); // Identify as Browser client
 });
 
 socket.onmessage = (ev) => {
-  console.log("Received message:", ev.data);
+  const message = JSON.parse(ev.data); // Parse the JSON string
+
+  // Handle messages based on their type
+  switch (message.type) {
+    case "svg":
+      createSVG(message.svg);
+      break;
+    case "position":
+      setDrawPosition(message.position);
+      break;
+  }
 };
-}); */
 
+function setDrawPosition(pos) {
+  pos.x = map(pos.x, 0, 1, 0, width);
+  pos.y = map(pos.y, 0, 1, 0, height);
+}
 
+function simplifySVG(svg) {
+  let path = new Path(svg);
+  // Create a new group to hold the simplified paths
+  const simplifiedGroup = new paper.Group();
+  const simplifyStrength = 5;
 
-function createSVG() {
-  if (gameState === "runGame") {
-    if (item) {
-      // Create a new group to hold the simplified paths
-      const simplifiedGroup = new paper.Group();
-      const simplifyStrength = 5;
+  // simplify logic for different labels of paper.js objects (path, compound, shape)
+  if (path instanceof paper.Path) {
+    path.simplify(simplifyStrength);
+    simplifiedGroup.addChild(path);
+  }
 
-      // Process the loaded SVG item
-      item.children.forEach((child) => {
-        // simplify logic for different labels of paper.js objects (path, compound, shape)
-        if (child instanceof paper.Path) {
-          child.simplify(simplifyStrength);
-          simplifiedGroup.addChild(child);
-        } else if (child instanceof paper.CompoundPath) {
-          child.simplify(simplifyStrength);
-          simplifiedGroup.addChild(child);
-        } else if (child instanceof paper.Shape) {
-          console.log("Shape object ignored");
-        }
+  // else if (child instanceof paper.CompoundPath) {
+  //   child.simplify(simplifyStrength);
+  //   simplifiedGroup.addChild(child);
+  // } else if (child instanceof paper.Shape) {
+  //   console.log("Shape object ignored");
+  // }
+
+  // Export the simplified group back to an SVG string
+  const svgString = simplifiedGroup.exportSVG({ asString: true });
+
+  // turn that string into a DOM element
+  const parser = new DOMParser();
+  const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
+  const paths = svgDoc.getElementsByTagName("path");
+  return paths;
+}
+
+function createSVG(svg) {
+  if (gameState === "runGame" && svg) {
+    let drawnSVG;
+    let levelBodies = Composite.allBodies(world);
+    drawableSVG = simplifySVG(svg);
+
+    // prevent multiple SVG bodies from existing
+    if (svgShapes.length > 0) {
+      svgShapes.forEach((x) => {
+        x.removeBody();
       });
-
-      // Export the simplified group back to an SVG string
-      const svgString = simplifiedGroup.exportSVG({ asString: true });
-
-      // turn that string into a DOM element
-      const parser = new DOMParser();
-      const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-      const paths = svgDoc.getElementsByTagName("path");
-
-      // Resolve the promise with the simplified SVG path data
-      resolve(paths);
     }
-    getDrawPosition().then((pos) => {
-      let drawnSVG;
-      let levelBodies = Composite.allBodies(world);
-      pos.x = map(pos.x, 0, 1, 0, width);
-      pos.y = map(pos.y, 0, 1, 0, height);
 
-      if (pos.color === "yellow") {
-        if (svgShapes.length > 0) {
-          svgShapes.forEach((x) => {
-            x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-          });
-        }
-        svgShapes = []; // remove old SVG bodies from drawing logic
+    svgShapes = [];
 
-        drawnSVG = new PolygonFromSVG(
-          world,
-          {
-            x: pos.x,
-            y: pos.y,
-            fromPath: drawableSVG[0],
-            color: "white",
-            stroke: "black",
-            weight: 2,
-          },
-          { isStatic: false, mass: 100, label: "drawnBody" }
-        );
-      }
+    // create svg body from path data
+    drawnSVG = new PolygonFromSVG(
+      world,
+      {
+        x: pos.x,
+        y: pos.y,
+        fromPath: drawableSVG[0],
+        color: "white",
+        stroke: "black",
+        weight: 2,
+      },
+      { isStatic: false, mass: 100, label: "drawnBody" }
+    );
 
-      if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
-        console.log("collision of drawn body with level geometry");
-        drawnSVG.removeBody(world, drawnSVG);
-      } else {
-        svgShapes.push(drawnSVG);
-      }
-    });
+    // remove svg body if it collides with other geometry on spawn
+    if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
+      console.log("collision of svg body with level geometry");
+      drawnSVG.removeBody(world, drawnSVG);
+    } else {
+      svgShapes.push(drawnSVG);
+    }
   }
 }
