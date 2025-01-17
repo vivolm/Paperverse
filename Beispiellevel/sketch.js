@@ -18,6 +18,8 @@ const world = engine.world;
 const runner = Runner.create();
 const socket = new WebSocket("ws://localhost:8080");
 
+
+
 // global variables for tracking bodies & assets
 let drawBodies = [];
 let svgShapes = [];
@@ -804,8 +806,9 @@ function pressButton(button) {
 
 socket.addEventListener("open", () => {
   console.log("Connected to WebSocket Server");
+  socket.send(JSON.stringify({ type: "browser" })); // Identify as Browser client
 });
 
-socket.addEventListener("message", (ev) => {
-  console.log(ev.data);
-});
+socket.onmessage = (ev) => {
+  console.log("Received message:", ev.data);
+};

@@ -10,6 +10,24 @@ const redFilteredImagePath = "../output/red_filtered.png";
 const simplifiedImagePath = "../output/simplified.png";
 const processedImagePath = "../output/processed.png";
 const outputSvg = "../output/output.svg";
+const ws = new WebSocket("ws://localhost:8080");
+
+ws.on("open", () => {
+    console.log("Connected to WebSocket server");
+    ws.send(JSON.stringify({ type: "node" })); // Identify as Node client
+});
+
+ws.on("message", (message) => {
+    const data = JSON.parse(message);
+    if (data.type === "python" && data.image) {
+        console.log("Received image for SVG conversion:", data.image);
+        // Perform SVG conversion (mocked here)
+        const svg = "<svg>...</svg>";
+        ws.send(JSON.stringify({ type: "node", svg }));
+    }
+});
+
+
 
 // Function to extract red parts of the image
 async function extractRedParts(inputImage, outputImage) {
@@ -123,18 +141,8 @@ function convertToSvg() {
     // fs.writeFileSync(outputSvg, trace.getSVG());
     // console.log(`SVG saved as ${outputSvg}`);
     // copyJsonFile();
-    wss.on('connection', (ws) => {
-        console.log('Client connected');
-     
-        //ws.send(data.svgPath);
-        
-        
     
-        ws.on('message', (message) => {
-            console.log(`Received: ${message}`);
-            
-        });
-    });
+    
    
     
   });
