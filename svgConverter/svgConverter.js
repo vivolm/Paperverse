@@ -17,7 +17,7 @@ ws.on("open", () => {
     ws.send(JSON.stringify({ type: "node" })); // Identify as Node client
 });
 
-ws.on("message", (message) => {
+/* ws.on("message", (message) => {
     const data = JSON.parse(message);
     if (data.type === "python" && data.image) {
         console.log("Received image for SVG conversion:", data.image);
@@ -25,7 +25,7 @@ ws.on("message", (message) => {
         const svg = "<svg>...</svg>";
         ws.send(JSON.stringify({ type: "node", svg }));
     }
-});
+}); */
 
 
 
@@ -134,14 +134,18 @@ function convertToSvg() {
 
   trace.loadImage(processedImagePath, function (err) {
     if (err) throw err;
-    const data = {
-        svgPath: trace.getSVG(),
-      };
-    
-    // fs.writeFileSync(outputSvg, trace.getSVG());
-    // console.log(`SVG saved as ${outputSvg}`);
-    // copyJsonFile();
-    
+
+    const dataSvg = { 
+        type: "node", 
+        data: { 
+            type: "svg", 
+            svg: trace.getSVG() 
+        } 
+    }
+   
+    ws.send(JSON.stringify(dataSvg));
+    console.log(dataSvg);
+    console.log("sent svg to browser.");
     
    
     

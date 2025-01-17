@@ -1,0 +1,1 @@
+shared\detected_postit.png, "yellow"
