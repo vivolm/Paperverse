@@ -25,9 +25,10 @@ let drawnSVG;
 let backgroundImgs = [];
 let angryAnim;
 let characterBody;
-let spikeBall;
-let rotationSpeed = 0.0001;
-let isRotating = true;
+let leftBall;
+let rightBall;
+let leftRotating = true;
+let rightRotating = true;
 // global variable for data tracking
 let lastPositionColor = {
   x: null,
@@ -37,8 +38,8 @@ let lastPositionColor = {
 
 // global game logic
 let gameState = "runGame";
-let currentLevel = 2;
-let finalLevel = 5;
+let currentLevel = "tutorial";
+let levelCount = 4;
 
 function preload() {
   // load each background and push it to the backgrounds array
@@ -70,6 +71,16 @@ function setup() {
 
   resizeCanvas(windowWidth, windowHeight + 10);
 
+  // load the SVG and then simplify it
+  loadSVG("./SVG/Round.svg")
+    .then((simplifiedSVG) => {
+      drawableSVG = simplifiedSVG;
+      console.log(drawableSVG);
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+
   // scale down the animation asset
   angryAnim.scale = 0.5;
 
@@ -89,37 +100,45 @@ function draw() {
     // draw all bodies and perform special functions (like rotation)
     drawBodies.forEach((x) => {
       x.draw();
-      if (x.options.label === "spikeBall") {
-        if (isRotating) {
-          Body.rotate(x.body, radians(0.5));
-        }
+    });
+
+    if (leftBall && rightBall) {
+      if (leftRotating) {
+        Body.rotate(leftBall.body, radians(-0.5));
       }
-    });
-
-    // draw the handdrawn svg shape
-    svgShapes.forEach((x) => {
-      x.draw();
-    });
-
-    // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
-    if (characterBody) {
-      characterBody.draw();
-      animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-    }
-
-    // draw post-it placement hint NOTE: Add svg body condition
-    if (currentLevel == 1) {
-      push();
-      rectMode(CENTER);
-      stroke(247, 54, 0);
-      strokeWeight(3);
-      noFill();
-      drawingContext.setLineDash([5, 5]);
-      rect(width / 2, height / 4, 200, 200);
-      pop();
+      if (rightRotating) {
+        Body.rotate(rightBall.body, radians(0.5));
+      }
     }
   }
 
+  // draw the handdrawn svg shape
+  svgShapes.forEach((x) => {
+    x.draw();
+  });
+
+  // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
+  if (characterBody) {
+    characterBody.draw();
+    animation(
+      angryAnim,
+      characterBody.body.position.x,
+      characterBody.body.position.y,
+      degrees(characterBody.body.angle)
+    );
+  }
+
+  // draw post-it placement hint NOTE: Add svg body condition
+  if (currentLevel === "tutorial") {
+    push();
+    rectMode(CENTER);
+    stroke(247, 54, 0);
+    strokeWeight(3);
+    noFill();
+    drawingContext.setLineDash([5, 5]);
+    rect(width / 2, height / 4, 200, 200);
+    pop();
+  }
   if (gameState === "failure") {
     // play disappointed char anim here
   }
@@ -220,7 +239,7 @@ function loadSVG(url) {
 
           // Process the loaded SVG item
           item.children.forEach((child) => {
-            // simplify logic for different types of paper.js objects (path, compound, shape)
+            // simplify logic for different labels of paper.js objects (path, compound, shape)
             if (child instanceof paper.Path) {
               child.simplify(simplifyStrength);
               simplifiedGroup.addChild(child);
@@ -253,8 +272,43 @@ function loadSVG(url) {
 }
 
 function mousePressed() {
+  if (gameState === "runGame") {
+    getDrawPosition().then((pos) => {
+      let drawnSVG;
+      let levelBodies = Composite.allBodies(world);
+      pos.x = map(pos.x, 0, 1, 0, width);
+      pos.y = map(pos.y, 0, 1, 0, height);
 
+      if (pos.color === "yellow") {
+        if (svgShapes.length > 0) {
+          svgShapes.forEach((x) => {
+            x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+          });
+        }
+        svgShapes = []; // remove old SVG bodies from drawing logic
 
+        drawnSVG = new PolygonFromSVG(
+          world,
+          {
+            x: pos.x,
+            y: pos.y,
+            fromPath: drawableSVG[0],
+            color: "white",
+            stroke: "black",
+            weight: 2,
+          },
+          { isStatic: false, mass: 100, label: "drawnBody" }
+        );
+      }
+
+      if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
+        console.log("collision of drawn body with level geometry");
+        drawnSVG.removeBody(world, drawnSVG);
+      } else {
+        svgShapes.push(drawnSVG);
+      }
+    });
+  }
 }
 
 async function getDrawPosition() {
@@ -281,11 +335,23 @@ async function getDrawPosition() {
   }
 }
 
+// Change the current level on key press
 function keyPressed() {
-  // change the current level on key press
-  if (key >= 1 && key <= finalLevel) {
-    createLevel(key, true);
-    currentLevel = key;
+  // Create a mapping of level keys to level names
+  const levelMapping = {
+    1: "tutorial",
+    2: "bridge",
+    3: "snake",
+    4: "balls",
+  };
+
+  // Get the level name based on the key pressed
+  const levelName = levelMapping[key];
+
+  // Check if the level name exists in the mapping
+  if (levelName) {
+    createLevel(levelName, true); // Pass the level name instead of the key
+    currentLevel = levelName; // Update the current level
   }
 }
 
@@ -301,180 +367,290 @@ function createLevel(levelIndex, clear) {
     drawBodies = [];
   }
   // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data
-  let levelDims = [
-    {
-      character: { scale: 0.5 }, // character scale for all levels
+  let dim = {
+    char: {
+      scale: 0.5,
     },
-    {
-      dimensions: [
-        //tutorial 1
-        { w: width, h: height / 1 / 5 },
-      ],
+    tutorial: {
+      floor: { w: width, h: height / 1 / 5 },
+      base: { w: width / 6, h: height / 12 },
+      top: { w: width / 10, h: height / 14 },
     },
-    {
-      dimensions: [
-        // tutorial 2
-        { w: width, h: height / 1 / 5 },
-        { w: width / 6, h: height / 12 },
-        { w: width / 10, h: height / 14 },
-      ],
+    bridge: {
+      leftCliff: { w: width / 2, h: height / 1 / 5 },
+      rightCliff: { w: width / 2.5, h: height / 1 / 5 },
+      sensor: { w: 100, h: 50 },
     },
-    {
-      dimensions: [
-        // level 1 bridge
-        { w: width / 2, h: height / 1 / 3 },
-        { w: width / 2.5, h: height / 1 / 3 },
-        { w: 100, h: 50 },
-      ],
+    snake: {
+      floor: { w: width, h: height / 1 / 5 },
+      snake: { x: width - width / 4, y: height / 1 / 5 + 100 },
     },
-    {
-      dimensions: [
-        // level 2 ball
-        { w: width / 2, h: height / 1 / 3 },
-        { w: width / 3.5, h: height / 1 / 3 },
-        { w: width, h: height / 1 / 5 },
-      ],
+    balls: {
+      leftWall: { w: width / 3.5, h: height / 2 },
+      rightWall: { w: width / 3.5 },
+      floor: { w: width, h: height / 1 / 5 },
+      radius: width / 12,
     },
-    {
-      dimensions: [
-        // level 3 button
-        { w: width / 8, h: height },
-        { w: width / 4, h: height / 1 / 5 },
-      ],
-    },
-  ];
+  };
 
-  // set up data for each level (position, etc.), each array item corresponds to a level
-  let levels = [
-    {
-      // tutorial 1
+  let levels = {
+    tutorial: {
+      // tutorial level
       background: backgroundImgs[0],
-      terrain: [{ x: levelDims[1].dimensions[0].w / 2, y: height - levelDims[1].dimensions[0].h / 2, w: levelDims[1].dimensions[0].w, h: levelDims[1].dimensions[0].h }],
+      terrain: {
+        floor: {
+          x: dim.tutorial.floor.w / 2,
+          y: height - dim.tutorial.floor.h / 2,
+          w: dim.tutorial.floor.w,
+          h: dim.tutorial.floor.h,
+        },
+      },
+      button: {
+        base: {
+          x: dim.tutorial.floor.w / 2,
+          y: height - dim.tutorial.floor.h - dim.tutorial.base.h / 2,
+          w: dim.tutorial.base.w,
+          h: dim.tutorial.base.h,
+          label: "base",
+        },
+        top: {
+          x: dim.tutorial.floor.w / 2,
+          y:
+            height -
+            dim.tutorial.floor.h -
+            dim.tutorial.base.h -
+            dim.tutorial.top.h / 2,
+          w: dim.tutorial.top.w,
+          h: dim.tutorial.top.h,
+          label: "top",
+        },
+      },
     },
-    {
-      // tutorial 2
+    bridge: {
+      // bridge level
       background: backgroundImgs[0],
-      terrain: [{ x: levelDims[2].dimensions[0].w / 2, y: height - levelDims[2].dimensions[0].h / 2, w: levelDims[2].dimensions[0].w, h: levelDims[2].dimensions[0].h }],
-      button: [
-        {
-          x: levelDims[2].dimensions[0].w / 2,
-          y: height - levelDims[2].dimensions[0].h - levelDims[2].dimensions[1].h / 2,
-          w: levelDims[2].dimensions[1].w,
-          h: levelDims[2].dimensions[1].h,
-          type: "base",
+      terrain: {
+        leftCliff: {
+          x: dim.bridge.leftCliff.w / 2,
+          y: height - dim.bridge.leftCliff.h / 2,
+          w: dim.bridge.leftCliff.w,
+          h: dim.bridge.leftCliff.h,
         },
-        {
-          x: levelDims[2].dimensions[0].w / 2,
-          y: height - levelDims[2].dimensions[0].h - levelDims[2].dimensions[1].h - levelDims[2].dimensions[2].h / 2,
-          w: levelDims[2].dimensions[2].w,
-          h: levelDims[2].dimensions[2].h,
-          type: "button",
+        rightCliff: {
+          x: width - dim.bridge.rightCliff.w / 2,
+          y: height - dim.bridge.rightCliff.h / 2,
+          w: dim.bridge.rightCliff.w,
+          h: dim.bridge.rightCliff.h,
         },
-      ],
+      },
+      sensors: {
+        fail: {
+          x: dim.bridge.leftCliff.w,
+          y: height - 20,
+          w: width - (dim.bridge.leftCliff.w + dim.bridge.rightCliff.w),
+          h: 100,
+          label: "fail",
+        },
+        winLeft: {
+          x: dim.bridge.leftCliff.w - dim.bridge.sensor.w,
+          y: height - dim.bridge.leftCliff.h - dim.bridge.sensor.h,
+          w: dim.bridge.sensor.w,
+          h: dim.bridge.sensor.h,
+          label: "win",
+        },
+        winRight: {
+          x: width - dim.bridge.rightCliff.w,
+          y: height - dim.bridge.rightCliff.h - dim.bridge.sensor.h,
+          w: dim.bridge.sensor.w,
+          h: dim.bridge.sensor.h,
+          label: "win",
+        },
+      },
+      char: {
+        x: dim.bridge.leftCliff.w / 2,
+        y: height / 2,
+        w: angryAnim.width * dim.char.scale,
+        h: angryAnim.height * dim.char.scale,
+      },
     },
-    {
-      // level 1 bridge
+    snake: {
+      // snake level
       background: backgroundImgs[0],
-      terrain: [
-        { x: levelDims[3].dimensions[0].w / 2, y: height - levelDims[3].dimensions[0].h / 2, w: levelDims[3].dimensions[0].w, h: levelDims[3].dimensions[0].h },
-        { x: width - levelDims[3].dimensions[1].w / 2, y: height - levelDims[3].dimensions[1].h / 2, w: levelDims[3].dimensions[1].w, h: levelDims[3].dimensions[1].h },
-      ],
-      sensors: [
-        { x: levelDims[3].dimensions[0].w / 2 + levelDims[3].dimensions[0].w / 2, y: height - 20, w: width - (levelDims[3].dimensions[0].w + levelDims[3].dimensions[1].w), h: 100, type: "fail" },
-        {
-          x: levelDims[3].dimensions[0].w / 2 + levelDims[3].dimensions[0].w / 2 - levelDims[3].dimensions[2].w,
-          y: height - levelDims[1].dimensions[0].h / 2 - levelDims[3].dimensions[0].h / 2 - levelDims[3].dimensions[2].h,
-          w: levelDims[3].dimensions[2].w,
-          h: levelDims[3].dimensions[2].h,
-          type: "win",
+      terrain: {
+        floor: {
+          x: dim.snake.floor.w / 2,
+          y: height - dim.snake.floor.h / 2,
+          w: dim.snake.floor.w,
+          h: dim.snake.floor.h,
         },
-        {
-          x: width - levelDims[3].dimensions[1].w / 2 - levelDims[3].dimensions[1].w / 2,
-          y: height - levelDims[3].dimensions[1].h / 2 - levelDims[3].dimensions[1].h / 2 - levelDims[3].dimensions[2].h,
-          w: levelDims[3].dimensions[2].w,
-          h: levelDims[3].dimensions[2].h,
-          type: "win",
+      },
+      sensors: {
+        snake: {
+          x: dim.snake.snake.x,
+          y: dim.snake.snake.y,
+          // ADD: Dynamically link asset size
+          w: 50,
+          h: 50,
+          label: "snake",
         },
-      ],
-      char: { x: levelDims[3].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      },
     },
-    {
-      // level 2 ball
+    balls: {
+      // balls level
       background: backgroundImgs[0],
-      terrain: [
-        { x: levelDims[4].dimensions[0].w / 2, y: levelDims[4].dimensions[0].h / 2, w: levelDims[4].dimensions[0].w, h: levelDims[4].dimensions[0].h },
-        { x: width - levelDims[4].dimensions[1].w / 2, y: levelDims[4].dimensions[1].h / 2, w: levelDims[4].dimensions[1].w, h: levelDims[4].dimensions[1].h },
-        { x: width / 2, y: height - levelDims[4].dimensions[2].h / 2, w: levelDims[4].dimensions[2].w, h: levelDims[4].dimensions[2].h },
-      ],
-      spikeBall: [
-        {
-          x: levelDims[4].dimensions[0].w + (width - levelDims[4].dimensions[0].w - levelDims[4].dimensions[1].w) / 2,
-          y: levelDims[4].dimensions[0].h,
-          r: ((width - levelDims[4].dimensions[0].w - levelDims[4].dimensions[1].w) / 2) * 0.7,
+      terrain: {
+        leftWall: {
+          x: dim.balls.leftWall.w / 2,
+          y: 0 + dim.balls.leftWall.h / 2,
+          w: dim.balls.leftWall.w,
+          h: dim.balls.leftWall.h,
         },
-      ],
-      char: { x: levelDims[4].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+        rightWall: {
+          x: width - dim.balls.rightWall.w / 2,
+          y: (height - dim.balls.floor.h) / 2,
+          w: dim.balls.rightWall.w,
+          h: height - dim.balls.floor.h,
+        },
+        floor: {
+          x: width / 2,
+          y: height - dim.balls.floor.h / 2,
+          w: dim.balls.floor.w,
+          h: dim.balls.floor.h,
+        },
+      },
+      spikeBall: {
+        left: {
+          x: dim.balls.leftWall.w + dim.balls.radius,
+          y: 0 + dim.balls.leftWall.h / 1.5,
+          r: dim.balls.radius,
+          label: "leftBall",
+        },
+        right: {
+          x: width - dim.balls.rightWall.w - dim.balls.radius,
+          y: height - dim.balls.floor.h - dim.balls.radius,
+          r: dim.balls.radius,
+          label: "rightBall",
+        },
+      },
     },
-    {
-      // level 3 button
-      background: backgroundImgs[0],
-      terrain: [
-        { x: width - levelDims[5].dimensions[0].w / 2, y: levelDims[5].dimensions[0].h / 2, w: levelDims[5].dimensions[0].w, h: levelDims[5].dimensions[0].h },
-        { x: levelDims[5].dimensions[1].w / 2, y: height - levelDims[5].dimensions[1].h / 2, w: levelDims[5].dimensions[1].w, h: levelDims[5].dimensions[1].h },
-      ],
-    },
-  ];
+  };
 
-  // access the correct level data (-1 so key inputs start at 1 instead of 0)
-  levelIndex = levelIndex - 1;
+  // access the correct level data
   level = levels[levelIndex];
 
   // create bodies (e.g. static/dynamic geo, sensors, characters)
   if (level.terrain) {
-    level.terrain.forEach((geo) => {
-      let levelGeo = new Block(world, { x: geo.x, y: geo.y, w: geo.w, h: geo.h, color: "white", stroke: "black", weight: 2 }, { isStatic: true, label: "terrain" });
+    // Access terrain properties directly
+    Object.values(level.terrain).forEach((geo) => {
+      let levelGeo = new Block(
+        world,
+        {
+          x: geo.x,
+          y: geo.y,
+          w: geo.w,
+          h: geo.h,
+          color: "white",
+          stroke: "black",
+          weight: 2,
+        },
+        { isStatic: true, label: "terrain" }
+      );
       drawBodies.push(levelGeo);
     });
   }
 
-  // create sensors (e.g. for collision detection)
+  // Create sensors (e.g., for collision detection)
   if (level.sensors) {
-    level.sensors.forEach((sensor) => {
+    Object.values(level.sensors).forEach((sensor) => {
       let levelSensor;
-      if (sensor.type === "fail") {
-        levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h }, { isStatic: true, isSensor: true, label: "failSensor" }, "CORNER");
-      } else if (sensor.type === "win") {
-        levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h }, { isStatic: true, isSensor: true, label: "winSensor" }, "CORNER");
-      }
+      levelSensor = new Block(
+        world,
+        { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h },
+        { isStatic: true, isSensor: true, label: sensor.label },
+        "CORNER"
+      );
       drawBodies.push(levelSensor);
     });
   }
 
-  // create spikey ball (e.g. for obstacles)
+  // Create spikey ball (e.g. for obstacles)
   if (level.spikeBall) {
-    level.spikeBall.forEach((spikey) => {
-      let spikeBall = new SpikedBall(world, { x: spikey.x, y: spikey.y, r: spikey.r, color: "white", stroke: "black", weight: 2 }, { isStatic: true, label: "spikeBall" });
-      drawBodies.push(spikeBall);
+    Object.values(level.spikeBall).forEach((spikey) => {
+      if (spikey.label === "leftBall") {
+        leftBall = new SpikedBall(
+          world,
+          {
+            x: spikey.x,
+            y: spikey.y,
+            r: spikey.r,
+            color: "white",
+            stroke: "black",
+            weight: 2,
+          },
+          { isStatic: true, label: "leftBall" }
+        );
+        drawBodies.push(leftBall);
+      } else if (spikey.label === "rightBall") {
+        rightBall = new SpikedBall(
+          world,
+          {
+            x: spikey.x,
+            y: spikey.y,
+            r: spikey.r,
+            color: "white",
+            stroke: "black",
+            weight: 2,
+          },
+          { isStatic: true, label: "rightBall" }
+        );
+        drawBodies.push(rightBall);
+      }
     });
   }
 
-  // create button
+  // Create button
   if (level.button) {
-    level.button.forEach((button) => {
+    Object.values(level.button).forEach((button) => {
       let buttonBlock;
-      if (button.type === "base") {
-        buttonBlock = new Block(world, { x: button.x, y: button.y, w: button.w, h: button.h, color: "black" }, { isStatic: true, label: "buttonBase" });
-      } else if (button.type === "button") {
-        buttonBlock = new Block(world, { x: button.x, y: button.y, w: button.w, h: button.h, color: "red", stroke: "black", weight: 2 }, { isStatic: true, label: "button" });
+      if (button.label === "base") {
+        buttonBlock = new Block(
+          world,
+          {
+            x: button.x,
+            y: button.y,
+            w: button.w,
+            h: button.h,
+            color: "black",
+          },
+          { isStatic: true, label: "buttonBase" }
+        );
+      } else if (button.label === "top") {
+        buttonBlock = new Block(
+          world,
+          {
+            x: button.x,
+            y: button.y,
+            w: button.w,
+            h: button.h,
+            color: "red",
+            stroke: "black",
+            weight: 2,
+          },
+          { isStatic: true, label: "buttonTop" }
+        );
       }
       drawBodies.push(buttonBlock);
     });
   }
 
-  // create character
+  // Create character
   if (level.char) {
     const char = level.char;
-    characterBody = new Block(world, { x: char.x, y: char.y, w: char.w, h: char.h }, { restitution: 0.5, friction: 0.5 });
+    characterBody = new Block(
+      world,
+      { x: char.x, y: char.y, w: char.w, h: char.h },
+      { restitution: 0.5, friction: 0.5 }
+    );
   }
 }
 
@@ -485,15 +661,15 @@ Events.on(engine, "collisionStart", function (event) {
     const pairs = event.pairs;
 
     // check win/lose conditions for bridge level
-    if (currentLevel == 3) {
+    if (currentLevel === "bridge" && drawnSVG) {
       let winSensors = [];
       let failSensors = [];
 
       const bodies = Composite.allBodies(world);
       bodies.forEach((body) => {
-        if (body.label === "winSensor") {
+        if (body.label === "win") {
           winSensors.push(body);
-        } else if (body.label === "failSensor") {
+        } else if (body.label === "fail") {
           failSensors.push(body);
         }
       });
@@ -509,30 +685,42 @@ Events.on(engine, "collisionStart", function (event) {
         console.log("Object too small!");
         gameState = "failure";
       }
-    } else if (currentLevel == 4) {
+    } else if (currentLevel === "balls") {
       // ball level
-      let terrain = [];
+      let query = [];
       let testBlock;
       const bodies = Composite.allBodies(world);
       bodies.forEach((body) => {
-        if (body.label === "terrain") {
-          terrain.push(body);
+        if (body.label.includes("Ball")) {
+          query.push(body);
+        } else if (body.label === "terrain") {
+          query.push(body);
         } else if (body.label === "test") {
           testBlock = body;
         }
       });
 
       if (testBlock) {
-        terrain.forEach((ter) => {
-          if (Collision.collides(testBlock, ter)) {
-            console.log(Collision.collides(testBlock, ter));
-            if (Collision.collides(testBlock, ter).penetration.x > 5 || Collision.collides(testBlock, ter).penetration.y > 5) {
-              isRotating = false;
-            }
+        let collisionRecord = Query.collides(testBlock, query);
+        if (collisionRecord.length >= 2) {
+          let depth = Query.collides(testBlock, query)[0].depth;
+          if (Math.abs(depth) > 10) {
+            console.log(collisionRecord[1].bodyA.label);
+            console.log(collisionRecord[1].bodyB.label);
+            if (
+              collisionRecord[1].bodyA.label === "leftBall" ||
+              collisionRecord[1].bodyB.label === "leftBall"
+            ) {
+              leftRotating = false;
+            } else if (
+              collisionRecord[1].bodyA.label === "rightBall" ||
+              collisionRecord[1].bodyB.label === "rightBall"
+            )
+              rightRotating = false;
           }
-        });
+        }
       }
-    } else if (currentLevel == 2 || currentLevel == 5) {
+    } else if (currentLevel === "tutorial") {
       // tutorial and puzzle button level
       const massThreshold = 10;
       const velocityThreshold = 10;
@@ -541,18 +729,61 @@ Events.on(engine, "collisionStart", function (event) {
         const { bodyA, bodyB } = pair;
 
         // Determine which body is the button and which is the colliding body
-        const buttonBody = bodyA.label === "button" ? bodyA : bodyB.label === "button" ? bodyB : null;
+        const buttonBody =
+          bodyA.label === "button"
+            ? bodyA
+            : bodyB.label === "button"
+            ? bodyB
+            : null;
         const collidingBody = buttonBody === bodyA ? bodyB : bodyA;
 
         // Check if the colliding body has the required mass and velocity
         if (buttonBody && collidingBody) {
           const collidingMass = collidingBody.mass;
-          const collidingVelocity = Matter.Vector.magnitude(collidingBody.velocity);
-          console.log(collidingVelocity);
+          const collidingVelocity = Matter.Vector.magnitude(
+            collidingBody.velocity
+          );
+          // console.log(collidingVelocity);
 
-          if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
+          if (
+            collidingMass >= massThreshold &&
+            collidingVelocity >= velocityThreshold
+          ) {
             // Press the button down
             pressButton(buttonBody);
+          }
+        }
+      });
+    } else if (currentLevel === "snake") {
+      // tutorial and puzzle button level
+      const massThreshold = 10;
+      const velocityThreshold = 10;
+
+      pairs.forEach((pair) => {
+        const { bodyA, bodyB } = pair;
+
+        // Determine which body is the button and which is the colliding body
+        const snakeBody =
+          bodyA.label === "snake"
+            ? bodyA
+            : bodyB.label === "snake"
+            ? bodyB
+            : null;
+        const collidingBody = snakeBody === bodyA ? bodyB : bodyA;
+
+        // Check if the colliding body has the required mass and velocity
+        if (snakeBody && collidingBody) {
+          const collidingMass = collidingBody.mass;
+          const collidingVelocity = Matter.Vector.magnitude(
+            collidingBody.velocity
+          );
+          // console.log(collidingVelocity);
+
+          if (
+            collidingMass >= massThreshold &&
+            collidingVelocity >= velocityThreshold
+          ) {
+            // Squash the snake and win level
           }
         }
       });
