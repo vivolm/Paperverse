@@ -2,16 +2,25 @@ import cv2
 import numpy as np
 import os
 import json
-import time
+import websocket
+import asyncio
+
 
 # Define the shared directory and notification file paths
 output_directory = "./shared"
 notification_file = os.path.join(output_directory, "ready_for_svg.txt")
 metadata_file = os.path.join(output_directory, "metadata.json")
-
+ws_url = "ws://localhost:8080"
 # Ensure the shared directory exists
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
+
+
+def send_message():
+    ws = websocket.create_connection(ws_url) 
+        # Send a message to the server
+    ws.send("Hello from Python client!")
+    print("Message sent to server.")
 
 def notify_svg_conversion(cropped_file, color, stored_position):
     """
@@ -180,6 +189,7 @@ def main():
     drawing_detected = False
     no_movement_counter = 0
     movement_threshold = 5
+    
 
      # Initialize smoothing variables for relative position
     alpha = 0.2  # Smoothing factor for EMA (0 < alpha <= 1)
@@ -269,6 +279,8 @@ def main():
 
                 # Notify SVG converter
                 notify_svg_conversion(file_path, detected_color, stored_position)
+                send_message()
+                
 
                 while True:
                     print("Press 'c' to continue or 'q' to quit...")

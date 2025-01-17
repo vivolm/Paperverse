@@ -1,7 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
-
+const WebSocket = require('ws');
+const wss = new WebSocket.Server({ port: 8080 });
 // Shared directory and file paths
 const sharedDir = "shared/";
 const flagFile = path.join(sharedDir, "ready_for_svg.txt");
@@ -115,14 +116,27 @@ function convertToSvg() {
 
   trace.loadImage(processedImagePath, function (err) {
     if (err) throw err;
+    const data = {
+        svgPath: trace.getSVG(),
+      };
+    
     // fs.writeFileSync(outputSvg, trace.getSVG());
     // console.log(`SVG saved as ${outputSvg}`);
     // copyJsonFile();
-    const data = {
-      svgPath: trace.getSVG(),
-    };
-    const event = new CustomEvent("svgReady", data);
-    window.dispatchEvent(event);
+    wss.on('connection', (ws) => {
+        console.log('Client connected');
+     
+        //ws.send(data.svgPath);
+        
+        
+    
+        ws.on('message', (message) => {
+            console.log(`Received: ${message}`);
+            
+        });
+    });
+   
+    
   });
 }
 
