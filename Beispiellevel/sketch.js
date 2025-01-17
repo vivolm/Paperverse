@@ -16,6 +16,7 @@ Matter.use("matter-wrap");
 const engine = Engine.create();
 const world = engine.world;
 const runner = Runner.create();
+const socket = new WebSocket("ws://localhost:8080");
 
 // global variables for tracking bodies & assets
 let drawBodies = [];
@@ -801,6 +802,10 @@ function pressButton(button) {
   }, 500); // Adjust the delay as needed
 }
 
-window.addEventListener("svgReady", (ev) => {
+socket.addEventListener("open", () => {
+  console.log("Connected to WebSocket Server");
+});
+
+socket.addEventListener("message", (ev) => {
   console.log(ev.data);
 });
