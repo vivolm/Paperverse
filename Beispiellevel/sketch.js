@@ -27,19 +27,12 @@ let characterBody;
 let spikeBall;
 let rotationSpeed = 0.0001;
 let isRotating = true;
-//Anim Var
-let angryAnim;
-let idleAnim;
-let loseAnim;
-let noteAnim;
-let thinkAnim;
-let waitAnim;
-let winAnim;
-//Framerate
-let fps = 9;
-let currentFrame = 0;
-let endFrame;
 
+let animations = {};
+let animProperties = {
+  width: 175,
+  height: 248,
+};
 
 // global game logic
 let gameState = "runGame";
@@ -53,29 +46,55 @@ function preload() {
   });
 
   // load each animation
-  angryAnim = loadAni("./Assets/Sprite_Angry.png", {width: 175, height: 248, frames: 11});
-  idleAnim = loadAni("./Assets/Sprite_Idle.png", {width: 175, height: 248, frames: 18});
-  loseAnim = loadAni("./Assets/Sprite_Lose.png", {width: 175, height: 248, frames: 17});
-  noteAnim = loadAni("./Assets/Sprite_Note.png", {width: 175, height: 248, frames: 14});
-  thinkAnim = loadAni("./Assets/Sprite_Think.png", {width: 175, height: 248, frames: 11});
-  waitAnim = loadAni("./Assets/Sprite_Wait.png", {width: 175, height: 248, frames: 10});
-  winAnim = loadAni("./Assets/Sprite_Win.png", {width: 175, height: 248, frames: 13});
+  animations.angry = loadAni("./Assets/Sprite_Angry.png", {
+    width: animProperties.width,
+    height: animProperties.height,
+    frames: 11,
+    looping: false,
+  });
 
-  //set framerate with fps variable
-  angryAnim.frameDelay = fps;
-  idleAnim.frameDelay = fps;
-  loseAnim.frameDelay = fps;
-  noteAnim.frameDelay = fps;
-  thinkAnim.frameDelay = fps;
-  waitAnim.frameDelay = fps;
-  winAnim.frameDelay = fps;
+  animations.idle = loadAni("./Assets/Sprite_Idle.png", {
+    width: animProperties.width,
+    height: animProperties.height,
+    frames: 18,
+    looping: true,
+  });
+
+  animations.lose = loadAni("./Assets/Sprite_Lose.png", {
+    width: animProperties.width,
+    height: animProperties.height,
+    frames: 17,
+    looping: true,
+  });
+
+  animations.win = loadAni("./Assets/Sprite_Win.png", {
+    width: animProperties.width,
+    height: animProperties.height,
+    frames: 13,
+    looping: true,
+  });
+
+  animations.note = loadAni("./Assets/Sprite_Note.png", {
+    width: animProperties.width,
+    height: animProperties.height,
+    frames: 14,
+    looping: false,
+  });
+
+  animations.think = loadAni("./Assets/Sprite_Think.png", {
+    width: animProperties.width,
+    height: animProperties.height,
+    frames: 11,
+    looping: false,
+  });
+
+  animations.wait = loadAni("./Assets/Sprite_Wait.png", {
+    width: animProperties.width,
+    height: animProperties.height,
+    frames: 10,
+    looping: false,
+  });
 }
-
-
-
-
-
-
 
 function setup() {
   const canvas = createCanvas(windowWidth, windowHeight + 10);
@@ -87,6 +106,11 @@ function setup() {
 
   resizeCanvas(windowWidth, windowHeight + 10);
 
+  // set fps for animations
+  Object.keys(animations).forEach((i) => {
+    animations[i].frameDelay = 9;
+  });
+
   // load the SVG and then simplify it
   loadSVG("./SVG/output.svg")
     .then((simplifiedSVG) => {
@@ -96,23 +120,13 @@ function setup() {
       console.error(error);
     });
 
-  // scale down the animation asset
-  //angryAnim.scale = 0.5; (mit passeder größe jetzt)
-
   createLevel(currentLevel);
 
   // run the physics engine
   Runner.run(runner, engine);
 }
 
-
-
-
-
-
-
 function draw() {
-  
   // draw all background images NOTE: replace this code as soon as different levels use different background
   backgroundImgs.forEach((x) => {
     image(x, 0, 0, width, height);
@@ -133,64 +147,52 @@ function draw() {
     x.draw();
   });
 
-
-
   if (gameState == "runGame") {
     // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
     if (characterBody) {
       characterBody.draw();
-      //Placeholder Anforderungen für das Abspielen der verschiedenen Animationen
-      if(key === "a"){
-        animation(angryAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        loseAnim.frame = 0;
-        noteAnim.frame = 0;
-        thinkAnim.frame = 0;
-        waitAnim.frame = 0;
-        winAnim.frame = 0;
-        idleAnim.frame = 0;
 
-        playOnce(angryAnim);
-      }
-      else if(key === "b"){
-        animation(noteAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        angryAnim.frame = 0;
-        loseAnim.frame = 0;
-        thinkAnim.frame = 0;
-        waitAnim.frame = 0;
-        winAnim.frame = 0;
-        idleAnim.frame = 0;
+      if (key === "a") {
+        animations.angry.noLoop();
 
-        playOnce(noteAnim);
-        
-      }
-      else if(key === "c"){
-        animation(thinkAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        angryAnim.frame = 0;
-        loseAnim.frame = 0;
-        noteAnim.frame = 0;
-        waitAnim.frame = 0;
-        winAnim.frame = 0;
-        idleAnim.frame = 0;
+        animation(
+          animations.angry,
+          characterBody.body.position.x,
+          characterBody.body.position.y,
+          degrees(characterBody.body.angle)
+        );
 
-        playOnce(thinkAnim);
-      }
-      else if(key === "d"){
-        animation(waitAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-        angryAnim.frame = 0;
-        loseAnim.frame = 0;
-        noteAnim.frame = 0;
-        winAnim.frame = 0;
-        idleAnim.frame = 0;
+        /*     Object.keys(animations)
+          .filter((val) => val != "angry")
+          .forEach((i) => (animations[i].frame = 0)); */
+      } else if (key === "b") {
+        animations.note.noLoop();
 
-        playOnce(waitAnim);
-      }
-      else{
+        animation(
+          animations.note,
+          characterBody.body.position.x,
+          characterBody.body.position.y,
+          degrees(characterBody.body.angle)
+        );
+
+        /*         Object.keys(animations)
+          .filter((val) => val != "note")
+          .forEach((i) => (animations[i].frame = 0)); */
+      } else {
         //Idle Animation als Default
-        playIdle();
-      }      
-    }
+        animations.idle.loop();
+        animation(
+          animations.idle,
+          characterBody.body.position.x,
+          characterBody.body.position.y,
+          degrees(characterBody.body.angle)
+        );
 
-    
+        /*     Object.keys(animations)
+          .filter((val) => val != "idle")
+          .forEach((i) => (animations[i].frame = 0)); */
+      }
+    }
   }
 
   // draw post-it placement hint NOTE: Add svg body condition
@@ -214,97 +216,64 @@ function draw() {
     winScreen();
   }
 
-
   //Schwarzer Rahmen um Spielfeld
   strokeWeight(10);
   noFill();
-  rect(5,5,width-10,height-10);
-
-  textSize(50);
-  textAlign(CENTER);
-  textStyle(BOLD);
-  noStroke();
-  fill(0);
-  text(gameState, width/2, height/2);
-
+  rect(5, 5, width - 10, height - 10);
 }
 
-
-//Play Animation once then return back to idle state until key is called
-function playOnce(aniTitle){
-  endFrame = aniTitle.lastFrame;
-  //play Animation only once
-  if(currentFrame <= endFrame){
-    currentFrame+=6/60;
-    aniTitle.loop();
-  }
-  //return to idleState
-  else{
-    aniTitle.stop();
-    key = "i";
-  }
-}
-
-function playIdle(){
-  animation(idleAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
-
-  //Zurücksetzen aller Frames
-  angryAnim.frame = 0;
-  loseAnim.frame = 0;
-  noteAnim.frame = 0;
-  thinkAnim.frame = 0;
-  waitAnim.frame = 0;
-  winAnim.frame = 0;
-
-  //zurücksetzen der Frame Werte für Neustart der spezifischen Animationen
-  currentFrame = 0;
-  endFrame = 0;
-}
-
-function failScreen(){
+function failScreen() {
   characterBody.draw();
-  animation(loseAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+  animation(
+    animations.lose,
+    characterBody.body.position.x,
+    characterBody.body.position.y,
+    degrees(characterBody.body.angle)
+  );
 
   textAlign(CENTER);
   textSize(350);
   textStyle(BOLD);
   fill(0);
-  text("YOU SUCK", width/2, height/3);
+  text("YOU SUCK", width / 2, height / 3);
 
-  if(currentFrame <= loseAnim.lastFrame){
-    currentFrame+=6/60;
-    loseAnim.loop();
+  if (currentFrame <= animations.lose.lastFrame) {
+    currentFrame += 6 / 60;
+    animations.lose.loop();
   }
   //return to idleState
-  else{
-    loseAnim.stop();
+  else {
+    animations.lose.stop();
     gameState = "runGame";
   }
 }
 
-
-function winScreen(){
+function winScreen() {
   characterBody.draw();
-  animation(winAnim, characterBody.body.position.x, characterBody.body.position.y, degrees(characterBody.body.angle));
+  animation(
+    animations.win,
+    characterBody.body.position.x,
+    characterBody.body.position.y,
+    degrees(characterBody.body.angle)
+  );
 
   textAlign(CENTER);
   textSize(350);
   textStyle(BOLD);
   fill(0);
-  text("YOU RULE", width/2, height/3);
+  text("YOU RULE", width / 2, height / 3);
 
   //Make sure Screen lasts as long as animation
-  if(currentFrame <= winAnim.lastFrame){
-    currentFrame+=6/60;
-    winAnim.loop();
+  if (currentFrame <= animations.win.lastFrame) {
+    currentFrame += 6 / 60;
+    animations.win.loop();
   }
   //return to idleState and runGame-Status
-  else{
-    winAnim.stop();
+  else {
+    animations.win.stop();
     gameState = "runGame";
   }
 }
-
 
 function loadSVG(url) {
   return new Promise((resolve, reject) => {
@@ -351,16 +320,28 @@ function loadSVG(url) {
 }
 
 function mousePressed() {
-   if (gameState === "runGame") {
-     if (svgShapes.length > 0) {
-       svgShapes.forEach((x) => {
-         x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-       });
-     }
-     svgShapes = []; // remove old SVG bodies from drawing logic
-     drawnSVG = new PolygonFromSVG(world, { x: mouseX, y: mouseY, fromPath: drawableSVG[0], scale: 0.7, color: "white", stroke: "black", weight: 2 }, { label: "drawnBody" });
-     svgShapes.push(drawnSVG);
-   }
+  if (gameState === "runGame") {
+    if (svgShapes.length > 0) {
+      svgShapes.forEach((x) => {
+        x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+      });
+    }
+    svgShapes = []; // remove old SVG bodies from drawing logic
+    drawnSVG = new PolygonFromSVG(
+      world,
+      {
+        x: mouseX,
+        y: mouseY,
+        fromPath: drawableSVG[0],
+        scale: 0.7,
+        color: "white",
+        stroke: "black",
+        weight: 2,
+      },
+      { label: "drawnBody" }
+    );
+    svgShapes.push(drawnSVG);
+  }
 
   /*getDrawPosition().then((pos) => {
     let testBlock;
@@ -412,6 +393,36 @@ function keyPressed() {
     createLevel(key, true);
     currentLevel = key;
   }
+
+  /* if (key === "c") {
+    animation(
+      animations.think,
+      characterBody.body.position.x,
+      characterBody.body.position.y,
+      degrees(characterBody.body.angle)
+    );
+
+    Object.keys(animations)
+      .filter((val) => val != "think")
+      .forEach((i) => (animations[i].frame = 0));
+
+    playOnce(animations.think);
+  }
+
+  if (key === "d") {
+    animation(
+      animations.wait,
+      characterBody.body.position.x,
+      characterBody.body.position.y,
+      degrees(characterBody.body.angle)
+    );
+
+    Object.keys(animations)
+      .filter((val) => val != "wait")
+      .forEach((i) => (animations[i].frame = 0));
+
+    playOnce(animations.wait);
+  } */
 }
 
 function windowResized() {
@@ -474,82 +485,196 @@ function createLevel(levelIndex, clear) {
     {
       // tutorial 1
       background: backgroundImgs[0],
-      terrain: [{ x: levelDims[1].dimensions[0].w / 2, y: height - levelDims[1].dimensions[0].h / 2, w: levelDims[1].dimensions[0].w, h: levelDims[1].dimensions[0].h }],
-      char: { x: levelDims[1].dimensions[0].w / 4, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      terrain: [
+        {
+          x: levelDims[1].dimensions[0].w / 2,
+          y: height - levelDims[1].dimensions[0].h / 2,
+          w: levelDims[1].dimensions[0].w,
+          h: levelDims[1].dimensions[0].h,
+        },
+      ],
+      char: {
+        x: levelDims[1].dimensions[0].w / 4,
+        y: height / 2,
+        w: animProperties.width * levelDims[0].character.scale,
+        h: animProperties.height * levelDims[0].character.scale,
+      },
     },
     {
       // tutorial 2
       background: backgroundImgs[0],
-      terrain: [{ x: levelDims[2].dimensions[0].w / 2, y: height - levelDims[2].dimensions[0].h / 2, w: levelDims[2].dimensions[0].w, h: levelDims[2].dimensions[0].h }],
+      terrain: [
+        {
+          x: levelDims[2].dimensions[0].w / 2,
+          y: height - levelDims[2].dimensions[0].h / 2,
+          w: levelDims[2].dimensions[0].w,
+          h: levelDims[2].dimensions[0].h,
+        },
+      ],
       button: [
         {
           x: levelDims[2].dimensions[0].w / 2,
-          y: height - levelDims[2].dimensions[0].h - levelDims[2].dimensions[1].h / 2,
+          y:
+            height -
+            levelDims[2].dimensions[0].h -
+            levelDims[2].dimensions[1].h / 2,
           w: levelDims[2].dimensions[1].w,
           h: levelDims[2].dimensions[1].h,
           type: "base",
         },
         {
           x: levelDims[2].dimensions[0].w / 2,
-          y: height - levelDims[2].dimensions[0].h - levelDims[2].dimensions[1].h - levelDims[2].dimensions[2].h / 2,
+          y:
+            height -
+            levelDims[2].dimensions[0].h -
+            levelDims[2].dimensions[1].h -
+            levelDims[2].dimensions[2].h / 2,
           w: levelDims[2].dimensions[2].w,
           h: levelDims[2].dimensions[2].h,
           type: "button",
         },
       ],
-      char: { x: levelDims[2].dimensions[0].w / 4, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      char: {
+        x: levelDims[2].dimensions[0].w / 4,
+        y: height / 2,
+        w: animProperties.width * levelDims[0].character.scale,
+        h: animProperties.height * levelDims[0].character.scale,
+      },
     },
     {
       // level 1 bridge
       background: backgroundImgs[0],
       terrain: [
-        { x: levelDims[3].dimensions[0].w / 2, y: height - levelDims[3].dimensions[0].h / 2, w: levelDims[3].dimensions[0].w, h: levelDims[3].dimensions[0].h },
-        { x: width - levelDims[3].dimensions[1].w / 2, y: height - levelDims[3].dimensions[1].h / 2, w: levelDims[3].dimensions[1].w, h: levelDims[3].dimensions[1].h },
+        {
+          x: levelDims[3].dimensions[0].w / 2,
+          y: height - levelDims[3].dimensions[0].h / 2,
+          w: levelDims[3].dimensions[0].w,
+          h: levelDims[3].dimensions[0].h,
+        },
+        {
+          x: width - levelDims[3].dimensions[1].w / 2,
+          y: height - levelDims[3].dimensions[1].h / 2,
+          w: levelDims[3].dimensions[1].w,
+          h: levelDims[3].dimensions[1].h,
+        },
       ],
       sensors: [
-        { x: levelDims[3].dimensions[0].w / 2 + levelDims[3].dimensions[0].w / 2, y: height - 20, w: width - (levelDims[3].dimensions[0].w + levelDims[3].dimensions[1].w), h: 100, type: "fail" },
         {
-          x: levelDims[3].dimensions[0].w / 2 + levelDims[3].dimensions[0].w / 2 - levelDims[3].dimensions[2].w,
-          y: height - levelDims[1].dimensions[0].h / 2 - levelDims[3].dimensions[0].h / 2 - levelDims[3].dimensions[2].h,
+          x:
+            levelDims[3].dimensions[0].w / 2 + levelDims[3].dimensions[0].w / 2,
+          y: height - 20,
+          w:
+            width -
+            (levelDims[3].dimensions[0].w + levelDims[3].dimensions[1].w),
+          h: 100,
+          type: "fail",
+        },
+        {
+          x:
+            levelDims[3].dimensions[0].w / 2 +
+            levelDims[3].dimensions[0].w / 2 -
+            levelDims[3].dimensions[2].w,
+          y:
+            height -
+            levelDims[1].dimensions[0].h / 2 -
+            levelDims[3].dimensions[0].h / 2 -
+            levelDims[3].dimensions[2].h,
           w: levelDims[3].dimensions[2].w,
           h: levelDims[3].dimensions[2].h,
           type: "win",
         },
         {
-          x: width - levelDims[3].dimensions[1].w / 2 - levelDims[3].dimensions[1].w / 2,
-          y: height - levelDims[3].dimensions[1].h / 2 - levelDims[3].dimensions[1].h / 2 - levelDims[3].dimensions[2].h,
+          x:
+            width -
+            levelDims[3].dimensions[1].w / 2 -
+            levelDims[3].dimensions[1].w / 2,
+          y:
+            height -
+            levelDims[3].dimensions[1].h / 2 -
+            levelDims[3].dimensions[1].h / 2 -
+            levelDims[3].dimensions[2].h,
           w: levelDims[3].dimensions[2].w,
           h: levelDims[3].dimensions[2].h,
           type: "win",
         },
       ],
-      char: { x: levelDims[3].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      char: {
+        x: levelDims[3].dimensions[0].w / 2,
+        y: height / 2,
+        w: animProperties.width * levelDims[0].character.scale,
+        h: animProperties.height * levelDims[0].character.scale,
+      },
     },
     {
       // level 2 ball
       background: backgroundImgs[0],
       terrain: [
-        { x: levelDims[4].dimensions[0].w / 2, y: levelDims[4].dimensions[0].h / 2, w: levelDims[4].dimensions[0].w, h: levelDims[4].dimensions[0].h },
-        { x: width - levelDims[4].dimensions[1].w / 2, y: levelDims[4].dimensions[1].h / 2, w: levelDims[4].dimensions[1].w, h: levelDims[4].dimensions[1].h },
-        { x: width / 2, y: height - levelDims[4].dimensions[2].h / 2, w: levelDims[4].dimensions[2].w, h: levelDims[4].dimensions[2].h },
+        {
+          x: levelDims[4].dimensions[0].w / 2,
+          y: levelDims[4].dimensions[0].h / 2,
+          w: levelDims[4].dimensions[0].w,
+          h: levelDims[4].dimensions[0].h,
+        },
+        {
+          x: width - levelDims[4].dimensions[1].w / 2,
+          y: levelDims[4].dimensions[1].h / 2,
+          w: levelDims[4].dimensions[1].w,
+          h: levelDims[4].dimensions[1].h,
+        },
+        {
+          x: width / 2,
+          y: height - levelDims[4].dimensions[2].h / 2,
+          w: levelDims[4].dimensions[2].w,
+          h: levelDims[4].dimensions[2].h,
+        },
       ],
       spikeBall: [
         {
-          x: levelDims[4].dimensions[0].w + (width - levelDims[4].dimensions[0].w - levelDims[4].dimensions[1].w) / 2,
+          x:
+            levelDims[4].dimensions[0].w +
+            (width -
+              levelDims[4].dimensions[0].w -
+              levelDims[4].dimensions[1].w) /
+              2,
           y: levelDims[4].dimensions[0].h,
-          r: ((width - levelDims[4].dimensions[0].w - levelDims[4].dimensions[1].w) / 2) * 0.7,
+          r:
+            ((width -
+              levelDims[4].dimensions[0].w -
+              levelDims[4].dimensions[1].w) /
+              2) *
+            0.7,
         },
       ],
-      char: { x: levelDims[4].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      char: {
+        x: levelDims[4].dimensions[0].w / 2,
+        y: height / 2,
+        w: animProperties.width * levelDims[0].character.scale,
+        h: animProperties.height * levelDims[0].character.scale,
+      },
     },
     {
       // level 3 button
       background: backgroundImgs[0],
       terrain: [
-        { x: width - levelDims[5].dimensions[0].w / 2, y: levelDims[5].dimensions[0].h / 2, w: levelDims[5].dimensions[0].w, h: levelDims[5].dimensions[0].h },
-        { x: levelDims[5].dimensions[1].w / 2, y: height - levelDims[5].dimensions[1].h / 2, w: levelDims[5].dimensions[1].w, h: levelDims[5].dimensions[1].h },
+        {
+          x: width - levelDims[5].dimensions[0].w / 2,
+          y: levelDims[5].dimensions[0].h / 2,
+          w: levelDims[5].dimensions[0].w,
+          h: levelDims[5].dimensions[0].h,
+        },
+        {
+          x: levelDims[5].dimensions[1].w / 2,
+          y: height - levelDims[5].dimensions[1].h / 2,
+          w: levelDims[5].dimensions[1].w,
+          h: levelDims[5].dimensions[1].h,
+        },
       ],
-      char: { x: levelDims[5].dimensions[0].w / 2, y: height / 2, w: angryAnim.width * levelDims[0].character.scale, h: angryAnim.height * levelDims[0].character.scale },
+      char: {
+        x: levelDims[5].dimensions[0].w / 2,
+        y: height / 2,
+        w: animProperties.width * levelDims[0].character.scale,
+        h: animProperties.height * levelDims[0].character.scale,
+      },
     },
   ];
 
@@ -560,7 +685,19 @@ function createLevel(levelIndex, clear) {
   // create bodies (e.g. static/dynamic geo, sensors, characters)
   if (level.terrain) {
     level.terrain.forEach((geo) => {
-      let levelGeo = new Block(world, { x: geo.x, y: geo.y, w: geo.w, h: geo.h, color: "white", stroke: "black", weight: 6.5 }, { isStatic: true, label: "terrain" });
+      let levelGeo = new Block(
+        world,
+        {
+          x: geo.x,
+          y: geo.y,
+          w: geo.w,
+          h: geo.h,
+          color: "white",
+          stroke: "black",
+          weight: 6.5,
+        },
+        { isStatic: true, label: "terrain" }
+      );
       drawBodies.push(levelGeo);
     });
   }
@@ -570,9 +707,19 @@ function createLevel(levelIndex, clear) {
     level.sensors.forEach((sensor) => {
       let levelSensor;
       if (sensor.type === "fail") {
-        levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h }, { isStatic: true, isSensor: true, label: "failSensor" }, "CORNER");
+        levelSensor = new Block(
+          world,
+          { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h },
+          { isStatic: true, isSensor: true, label: "failSensor" },
+          "CORNER"
+        );
       } else if (sensor.type === "win") {
-        levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h }, { isStatic: true, isSensor: true, label: "winSensor" }, "CORNER");
+        levelSensor = new Block(
+          world,
+          { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h },
+          { isStatic: true, isSensor: true, label: "winSensor" },
+          "CORNER"
+        );
       }
       drawBodies.push(levelSensor);
     });
@@ -581,7 +728,18 @@ function createLevel(levelIndex, clear) {
   // create spikey ball (e.g. for obstacles)
   if (level.spikeBall) {
     level.spikeBall.forEach((spikey) => {
-      let spikeBall = new SpikedBall(world, { x: spikey.x, y: spikey.y, r: spikey.r, color: "white", stroke: "black", weight: 2 }, { isStatic: true, label: "spikeBall" });
+      let spikeBall = new SpikedBall(
+        world,
+        {
+          x: spikey.x,
+          y: spikey.y,
+          r: spikey.r,
+          color: "white",
+          stroke: "black",
+          weight: 2,
+        },
+        { isStatic: true, label: "spikeBall" }
+      );
       drawBodies.push(spikeBall);
     });
   }
@@ -591,9 +749,31 @@ function createLevel(levelIndex, clear) {
     level.button.forEach((button) => {
       let buttonBlock;
       if (button.type === "base") {
-        buttonBlock = new Block(world, { x: button.x, y: button.y, w: button.w, h: button.h, color: "black" }, { isStatic: true, label: "buttonBase" });
+        buttonBlock = new Block(
+          world,
+          {
+            x: button.x,
+            y: button.y,
+            w: button.w,
+            h: button.h,
+            color: "black",
+          },
+          { isStatic: true, label: "buttonBase" }
+        );
       } else if (button.type === "button") {
-        buttonBlock = new Block(world, { x: button.x, y: button.y, w: button.w, h: button.h, color: "white", stroke: "black", weight: 6.5 }, { isStatic: true, label: "button" });
+        buttonBlock = new Block(
+          world,
+          {
+            x: button.x,
+            y: button.y,
+            w: button.w,
+            h: button.h,
+            color: "white",
+            stroke: "black",
+            weight: 6.5,
+          },
+          { isStatic: true, label: "button" }
+        );
       }
       drawBodies.push(buttonBlock);
     });
@@ -602,7 +782,11 @@ function createLevel(levelIndex, clear) {
   // create character
   if (level.char) {
     const char = level.char;
-    characterBody = new Block(world, { x: char.x, y: char.y, w: char.w, h: char.h }, { restitution: 0.5, friction: 0.5 });
+    characterBody = new Block(
+      world,
+      { x: char.x, y: char.y, w: char.w, h: char.h },
+      { restitution: 0.5, friction: 0.5 }
+    );
   }
 }
 
@@ -654,7 +838,10 @@ Events.on(engine, "collisionStart", function (event) {
         terrain.forEach((ter) => {
           if (Collision.collides(testBlock, ter)) {
             console.log(Collision.collides(testBlock, ter));
-            if (Collision.collides(testBlock, ter).penetration.x > 5 || Collision.collides(testBlock, ter).penetration.y > 5) {
+            if (
+              Collision.collides(testBlock, ter).penetration.x > 5 ||
+              Collision.collides(testBlock, ter).penetration.y > 5
+            ) {
               isRotating = false;
             }
           }
@@ -669,16 +856,26 @@ Events.on(engine, "collisionStart", function (event) {
         const { bodyA, bodyB } = pair;
 
         // Determine which body is the button and which is the colliding body
-        const buttonBody = bodyA.label === "button" ? bodyA : bodyB.label === "button" ? bodyB : null;
+        const buttonBody =
+          bodyA.label === "button"
+            ? bodyA
+            : bodyB.label === "button"
+            ? bodyB
+            : null;
         const collidingBody = buttonBody === bodyA ? bodyB : bodyA;
 
         // Check if the colliding body has the required mass and velocity
         if (buttonBody && collidingBody) {
           const collidingMass = collidingBody.mass;
-          const collidingVelocity = Matter.Vector.magnitude(collidingBody.velocity);
+          const collidingVelocity = Matter.Vector.magnitude(
+            collidingBody.velocity
+          );
           console.log(collidingVelocity);
 
-          if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
+          if (
+            collidingMass >= massThreshold &&
+            collidingVelocity >= velocityThreshold
+          ) {
             // Press the button down
             pressButton(buttonBody);
           }
