@@ -5,13 +5,14 @@ const sharp = require('sharp');
 // Shared directory and file paths
 const sharedDir = "shared/";
 const flagFile = path.join(sharedDir, "ready_for_svg.txt");
-const greenFilteredImagePath = "../output/green_filtered.png";
+const redFilteredImagePath = "../output/red_filtered.png";
+const simplifiedImagePath = "../output/simplified.png";
 const processedImagePath = "../output/processed.png";
 const outputSvg = "../output/output.svg";
 
-// Function to extract green parts of the image
-async function extractGreenParts(inputImage, outputImage) {
-    console.log("Extracting green parts of the image...");
+// Function to extract red parts of the image
+async function extractRedParts(inputImage, outputImage) {
+    console.log("Extracting red parts of the image...");
 
     const image = sharp(inputImage);
     const { data, info } = await image.raw().toBuffer({ resolveWithObject: true });
@@ -24,37 +25,74 @@ async function extractGreenParts(inputImage, outputImage) {
         throw new Error("Input image must have at least 3 color channels (RGB).");
     }
 
-    const greenMask = Buffer.alloc(width * height * channels);
+    const redMask = Buffer.alloc(width * height * channels);
 
     for (let i = 0; i < data.length; i += channels) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
 
-        // Detect green pixels
-        if (g > 10 && g > r  && g > b ) {
-            // Turn green pixels to black
-            greenMask[i] = 0;       // Red
-            greenMask[i + 1] = 0;   // Green
-            greenMask[i + 2] = 0;   // Blue
+        // Detect red pixels
+        if (r > 10 && r > g * 1.3 && r > b * 1.3) {
+            // Turn red pixels to black
+            redMask[i] = 0;       // Red
+            redMask[i + 1] = 0;   // Green
+            redMask[i + 2] = 0;   // Blue
             if (channels === 4) {
-                greenMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
+                redMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
             }
         } else {
-            // Turn non-green pixels to white
-            greenMask[i] = 255;     // Red
-            greenMask[i + 1] = 255; // Green
-            greenMask[i + 2] = 255; // Blue
+            // Turn non-red pixels to white
+            redMask[i] = 255;     // Red
+            redMask[i + 1] = 255; // Green
+            redMask[i + 2] = 255; // Blue
             if (channels === 4) {
-                greenMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
+                redMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
             }
         }
     }
 
-    await sharp(greenMask, { raw: { width, height, channels } })
+    await sharp(redMask, { raw: { width, height, channels } })
         .toFile(outputImage);
 
-    console.log(`Green parts extracted and saved to ${outputImage}`);
+    console.log(`Red parts extracted and saved to ${outputImage}`);
+}
+
+// Function to simplify the image after red masking
+async function simplifyImage(inputImage, outputImage) {
+    console.log("Simplifying the image to ensure closed forms...");
+
+    const image = sharp(inputImage);
+
+    // Convert to grayscale (if not already)
+    const grayImage = await image
+        .greyscale()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+    const { data, info } = grayImage;
+    const width = info.width;
+    const height = info.height;
+    const channels = info.channels;
+
+    const simplifiedMask = Buffer.alloc(width * height * channels);
+
+    // Simplify the image using basic morphological operations
+    for (let i = 0; i < data.length; i += channels) {
+        const pixel = data[i];
+
+        // Apply binary thresholding
+        simplifiedMask[i] = pixel < 128 ? 0 : 255; // Black for low intensity, white for high
+        if (channels === 4) {
+            simplifiedMask[i + 3] = data[i + 3]; // Preserve alpha channel if present
+        }
+    }
+
+    // Save the simplified image
+    await sharp(simplifiedMask, { raw: { width, height, channels } })
+        .toFile(outputImage);
+
+    console.log(`Image simplified and saved to ${outputImage}`);
 }
 
 // Preprocess the red-filtered image (e.g., flip, grayscale, etc.)
@@ -93,7 +131,6 @@ function copyJsonFile() {
     }
 }
 
-
 // Watch for the flag file
 function watchForDrawing() {
     console.log("Watching for new drawing...");
@@ -115,8 +152,9 @@ function watchForDrawing() {
             fs.unlinkSync(flagFile);
 
             // Process the image
-            extractGreenParts(inputImage, greenFilteredImagePath)
-                .then(() => preprocessImage(greenFilteredImagePath, processedImagePath))
+            extractRedParts(inputImage, redFilteredImagePath)
+                .then(() => simplifyImage(redFilteredImagePath, simplifiedImagePath))
+                .then(() => preprocessImage(simplifiedImagePath, processedImagePath))
                 .then(convertToSvg)
                 .catch(console.error);
         }
