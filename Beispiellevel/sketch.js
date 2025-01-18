@@ -30,6 +30,9 @@ let leftBall;
 let rightBall;
 let leftRotating = true;
 let rightRotating = true;
+let exampleSVG = {
+  svg: '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" version="1.1">\n\t<path d="M 102.814 69.078 C 86.592 71.458, 81.106 74.105, 70.316 84.761 C 64.992 90.019, 62.310 94.894, 59.180 105 C 54.772 119.235, 53.730 126.031, 54.919 132.778 C 55.474 135.925, 56.183 140.548, 56.496 143.052 C 57.629 152.142, 67.764 168.535, 79.708 180.595 C 84.970 185.909, 99.013 188.493, 108.500 185.893 C 112.628 184.761, 126.614 175.865, 128.650 173.076 C 129.282 172.209, 131.679 169.475, 133.976 167.001 C 138.531 162.094, 145.833 150.556, 147.900 145 C 148.616 143.075, 149.719 140.419, 150.351 139.097 C 152.235 135.157, 151.845 109.280, 149.837 105 C 145.853 96.505, 143 90.085, 143 89.612 C 143 89.331, 141.688 87.156, 140.085 84.780 C 136.557 79.553, 130.412 74.999, 121.482 70.992 C 114.577 67.894, 112.405 67.671, 102.814 69.078 M 97.641 78.059 C 92.877 78.613, 90.109 79.489, 88.577 80.928 C 87.364 82.068, 86.063 83, 85.686 83 C 85.308 83, 84.208 83.787, 83.239 84.750 C 82.271 85.713, 80.359 87.400, 78.989 88.500 C 73.130 93.207, 68 102.809, 68 109.067 C 68 110.615, 67.626 112.113, 67.169 112.395 C 64.071 114.310, 63.394 134.720, 66.084 145.155 C 66.993 148.682, 70.656 157, 73.434 161.844 C 75.654 165.716, 82.210 171.992, 87 174.832 C 90.687 177.018, 92.674 177.488, 98, 177.433 C 106.312 177.347, 110.076 175.522, 118.427 167.533 C 122.065 164.053, 126.572 160.039, 128.442 158.612 C 135.149 153.496, 143.006 135.387, 142.992 125.076 C 142.972 110.344, 137.374 93.096, 130.415, 86.326 C 126.462 82.482, 124.552 81.341, 116.703 78.141 C 113.610 76.879, 108.008 76.855, 97.641 78.059" stroke="none" fill="black" fill-rule="evenodd"/>/n</svg>',
+};
 
 // global variable for data tracking
 let lastPositionColor = {
@@ -121,11 +124,11 @@ function draw() {
   if (currentLevel === "tutorial") {
     push();
     rectMode(CENTER);
-    stroke(247, 54, 0);
+    stroke(0);
     strokeWeight(3);
     noFill();
     drawingContext.setLineDash([5, 5]);
-    rect(width / 2, height / 4, 200, 200);
+    rect(width / 2, height / 4, 240, 240);
     pop();
   }
   if (gameState === "failure") {
@@ -137,7 +140,9 @@ function draw() {
   }
 }
 
-function mousePressed() {}
+function mousePressed() {
+  createSVG(exampleSVG.svg, true);
+}
 
 // Change the current level on key press
 function keyPressed() {
@@ -614,7 +619,7 @@ socket.addEventListener("open", () => {
 socket.onmessage = (ev) => {
   const message = JSON.parse(ev.data); // Parse the JSON string
 
-  createSVG(message.svg);
+  createSVG(message.svg, false);
 };
 
 // function simplifySVG(svg) {
@@ -646,15 +651,21 @@ socket.onmessage = (ev) => {
 //   return paths;
 // }
 
-function createSVG(svg) {
+function createSVG(svg, debug) {
   getDrawPosition().then((pos) => {
     if (gameState === "runGame" && svg) {
+      console.log(pos);
       let drawnSVG;
       let levelBodies = Composite.allBodies(world);
       let htmlPath = parseSVG(svg)[0];
 
-      pos.x = map(pos.x, 0, 1, 0, width);
-      pos.y = map(pos.y, 0, 1, 0, height);
+      if (!debug) {
+        pos.x = map(pos.x, 0, 1, 0, width);
+        pos.y = map(pos.y, 0, 1, 0, height);
+      } else if (debug) {
+        pos.x = mouseX;
+        pos.y = mouseY;
+      }
 
       // prevent multiple SVG bodies from existing
       if (svgShapes.length > 0) {
@@ -685,6 +696,7 @@ function createSVG(svg) {
         drawnSVG.removeBody(world, drawnSVG);
       } else {
         svgShapes.push(drawnSVG);
+        console.log(drawnSVG);
       }
     }
   });
