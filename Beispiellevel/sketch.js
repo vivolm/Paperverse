@@ -58,10 +58,6 @@ function preload() {
     height: 500,
     frames: 11,
   });
-
-  // loadJSON("../output/position_color.json", (test) => {
-  //   console.log(test);
-  // });
 }
 
 function setup() {
@@ -73,16 +69,6 @@ function setup() {
   paper.setup("myCanvas");
 
   resizeCanvas(windowWidth, windowHeight + 10);
-
-  // load the SVG and then simplify it
-  // loadSVG("./SVG/Round.svg")
-  //   .then((simplifiedSVG) => {
-  //     drawableSVG = simplifiedSVG;
-  //     console.log(drawableSVG);
-  //   })
-  //   .catch((error) => {
-  //     console.error(error);
-  //   });
 
   // scale down the animation asset
   angryAnim.scale = 0.5;
@@ -149,121 +135,7 @@ function draw() {
   if (gameState === "win") {
     // play happy char anim here
   }
-
-  // RRRRRRRRRRRRRRRR Check for changes in position_color.json every 1000 milliseconds (1 second)
-  // Check for changes in position_color.json every 60 frames (approximately every second at 60 FPS)
-  // if (gameState === "runGame") {
-  //   if (frameCount % 60 === 0) {
-  //     getDrawPosition().then((pos) => {
-  //       // Compare with last fetched position
-  //       if (
-  //         pos.x !== lastPositionColor.x &&
-  //         pos.y !== lastPositionColor.y &&
-  //         pos.color !== lastPositionColor.color
-  //       ) {
-  //         // Log the changes to the console
-  //         console.log("Position or color has changed:");
-  //         console.log("New Position:", pos.x, pos.y);
-  //         console.log("New Color:", pos.color);
-
-  //         // load the SVG and then simplify it
-  //         loadSVG("../output/output.svg")
-  //           .then((simplifiedSVG) => {
-  //             drawableSVG = simplifiedSVG;
-  //             // get all bodies to check for collision
-  //             let levelBodies = Composite.allBodies(world);
-
-  //             // map the positions to the actual screen
-  //             pos.x = map(pos.x, 0, 1, 0, width);
-  //             pos.y = map(pos.y, 0, 1, 0, height);
-
-  //             if (svgShapes.length > 0) {
-  //               svgShapes.forEach((x) => {
-  //                 x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-  //               });
-  //             }
-
-  //             svgShapes = []; // remove old SVG bodies from drawing logic
-
-  //             let bodyStatic;
-  //             if (pos.color === "blue") {
-  //               bodyStatic = true;
-  //             } else if (pos.color === "yellow") {
-  //               bodyStatic = false;
-  //             }
-
-  //             drawnSVG = new PolygonFromSVG(
-  //               world,
-  //               {
-  //                 x: pos.x,
-  //                 y: pos.y,
-  //                 fromPath: drawableSVG[0],
-  //                 scale: 0.7,
-  //                 color: "white",
-  //                 stroke: "black",
-  //                 weight: 6,
-  //               },
-  //               { label: "drawnBody", isStatic: bodyStatic }
-  //             );
-  //             if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
-  //               console.log("collision of drawn body with level geometry");
-  //               drawnSVG.removeBody();
-  //             } else {
-  //               svgShapes.push(drawnSVG);
-  //             }
-  //           })
-  //           .catch((error) => {
-  //             console.error(error);
-  //           });
-
-  //         // Update the last position color
-  //         lastPositionColor = pos;
-
-  //         // Update the position of the relevant object (if necessary)
-  //         if (characterBody) {
-  //           Body.setPosition(characterBody.body, { x: pos.x, y: pos.y });
-  //           // Optionally, update the color or do something else based on `pos.color`
-  //           // For example, if your characterBody has a color property:
-  //           // characterBody.color = pos.color;
-  //         }
-  //       }
-  //     });
-  //   }
-  // }
 }
-
-// function loadSVG(url) {
-//   if (item) {
-//     // Create a new group to hold the simplified paths
-//     const simplifiedGroup = new paper.Group();
-//     const simplifyStrength = 5;
-
-//     // Process the loaded SVG item
-//     item.children.forEach((child) => {
-//       // simplify logic for different labels of paper.js objects (path, compound, shape)
-//       if (child instanceof paper.Path) {
-//         child.simplify(simplifyStrength);
-//         simplifiedGroup.addChild(child);
-//       } else if (child instanceof paper.CompoundPath) {
-//         child.simplify(simplifyStrength);
-//         simplifiedGroup.addChild(child);
-//       } else if (child instanceof paper.Shape) {
-//         console.log("Shape object ignored");
-//       }
-//     });
-
-//     // Export the simplified group back to an SVG string
-//     const svgString = simplifiedGroup.exportSVG({ asString: true });
-
-//     // turn that string into a DOM element
-//     const parser = new DOMParser();
-//     const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-//     const paths = svgDoc.getElementsByTagName("path");
-
-//     // Resolve the promise with the simplified SVG path data
-//     resolve(paths);
-//   }
-// }
 
 function mousePressed() {}
 
