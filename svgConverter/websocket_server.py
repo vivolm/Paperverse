@@ -22,8 +22,13 @@ async def handler(websocket):
 
             # Route messages to other clients
             if client_type == "python":
-                if clients["browser"]:
-                    await clients["browser"].send("Testing...")
+                if clients["node"]:
+                    nested_data = data.get("data")  # Use `get` to safely access keys
+                    if nested_data != None:
+                        await clients["node"].send(json.dumps(nested_data))
+                        print(nested_data)
+                        print("position data recieved and sent to node.")
+                    
             elif client_type == "node":
                 print("got node message")
                 if clients["browser"]:
@@ -33,11 +38,7 @@ async def handler(websocket):
                         await clients["browser"].send(json.dumps(nested_data))
                         print(nested_data)
                         print("SVG received and sent to browser.")
-                else:
-                    print("No nested 'data' object found in the received message.")
-            elif client_type == "browser" and "ready_for_image" in data:
-                if clients["python"]:
-                    await clients["python"].send(json.dumps(data))
+
     except Exception as e:
         print(f"Error: {e}")
     finally:
