@@ -128,7 +128,7 @@ function draw() {
     strokeWeight(3);
     noFill();
     drawingContext.setLineDash([5, 5]);
-    rect(width / 2, height / 4, 240, 240);
+    rect(width / 2, height / 4, 260, 260);
     pop();
   }
   if (gameState === "failure") {
