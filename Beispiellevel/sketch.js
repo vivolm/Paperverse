@@ -59,9 +59,9 @@ function preload() {
     frames: 11,
   });
 
-  loadJSON("../output/position_color.json", (test) => {
-    console.log(test);
-  });
+  // loadJSON("../output/position_color.json", (test) => {
+  //   console.log(test);
+  // });
 }
 
 function setup() {
@@ -777,6 +777,7 @@ socket.onmessage = (ev) => {
 function createSVG(svg) {
   getDrawPosition().then((pos) => {
     if (gameState === "runGame" && svg) {
+      console.log(pos);
       let drawnSVG;
       let levelBodies = Composite.allBodies(world);
       let htmlPath = parseSVG(svg)[0];
