@@ -12,6 +12,8 @@ const processedImagePath = "../output/processed.png";
 const outputSvg = "../output/output.svg";
 const ws = new WebSocket("ws://localhost:8080");
 
+
+
 ws.on("open", () => {
     console.log("Connected to WebSocket server");
     ws.send(JSON.stringify({ type: "node" })); // Identify as Node client
@@ -19,14 +21,29 @@ ws.on("open", () => {
 
 /* ws.on("message", (message) => {
     const data = JSON.parse(message);
-    if (data.type === "python" && data.image) {
-        console.log("Received image for SVG conversion:", data.image);
-        // Perform SVG conversion (mocked here)
-        const svg = "<svg>...</svg>";
-        ws.send(JSON.stringify({ type: "node", svg }));
-    }
-}); */
+    console.log("got message.")
+    if (data.type === "position") {
+        const position = data.position;
+        console.log("New position data received:", position);
 
+        inputImage = "./shared/detected_postit.png"
+        color = "yellow"
+
+        console.log(`Processing file: ${inputImage}, Color: ${color}`);
+
+        
+
+        // Process the image and trigger SVG conversion
+        extractRedParts(inputImage, redFilteredImagePath)
+            .then(() => simplifyImage(redFilteredImagePath, simplifiedImagePath))
+            .then(() => preprocessImage(simplifiedImagePath, processedImagePath))
+            .then(() => {
+                convertToSvg(position); // Pass the position to SVG conversion
+            })
+            .catch(console.error);
+    }
+});
+ */
 
 
 // Function to extract red parts of the image
@@ -135,16 +152,16 @@ function convertToSvg() {
   trace.loadImage(processedImagePath, function (err) {
     if (err) throw err;
 
-    const dataSvg = { 
-        type: "node", 
-        data: { 
-            type: "svg", 
-            svg: trace.getSVG() 
-        } 
-    }
-   
+    const svgData = trace.getSVG();
+    const dataSvg = {
+        type: "node",
+        data: {
+            svg: svgData
+        }
+    };
+    copyJsonFile();
+    console.log("copied Json");
     ws.send(JSON.stringify(dataSvg));
-    console.log(dataSvg);
     console.log("sent svg to browser.");
     
    
@@ -200,5 +217,5 @@ function watchForDrawing() {
   });
 }
 
-// Start watching for the flag file
+//Start watching for the flag file
 watchForDrawing();

@@ -2,62 +2,19 @@ import cv2
 import numpy as np
 import os
 import json
-import websockets
-import asyncio
-from queue import Queue
-from threading import Thread
+
+
 
 # Define the shared directory and notification file paths
 output_directory = "./shared"
 notification_file = os.path.join(output_directory, "ready_for_svg.txt")
 metadata_file = os.path.join(output_directory, "metadata.json")
-ws_url = "ws://localhost:8080"
+
 # Ensure the shared directory exists
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
 
-""" def send_message():
-    ws = websocket.create_connection(ws_url) 
-        # Send a message to the server
-    ws.send("Hello from Python client!")
-    print("Message sent to server.")
- """
-async def send_data():
-    uri = "ws://localhost:8080"
-    async with websockets.connect(uri) as websocket:
-        # Identify as Python client
-        await websocket.send(json.dumps({"type": "python"}))
-
-        # Example: Send position data
-        position = {"type": "python", "position": {"x": 100, "y": 200}}
-        await websocket.send(json.dumps(position))
-
-        # Example: Wait for browser requests
-        async for message in websocket:
-            data = json.loads(message)
-            if "ready_for_image" in data:
-                print("Browser requested an image.")
-                # Send image processing data
-                await websocket.send(json.dumps({"type": "python", "image": "./shared/detected_postit.png"}))
-
-async def websocket_handler(queue):
-    uri = "ws://localhost:8080"
-    try:
-        async with websockets.connect(uri) as websocket:
-            # Identify as Python client
-            await websocket.send(json.dumps({"type": "python"}))
-            print("Connected to WebSocket server.")
-
-            while True:
-                # Wait for messages from the queue
-                data = await queue.get()
-                if data is None:
-                    break  # Exit the loop if `None` is sent
-                await websocket.send(json.dumps(data))
-                print(f"Sent data to server: {data}")
-    except Exception as e:
-        print(f"WebSocket error: {e}")
 
 
 def notify_svg_conversion(cropped_file, color, stored_position):
@@ -235,17 +192,10 @@ def main():
     stored_position = None  # To store the position that updates only on significant movement
     movement_threshold_distance = 0.05  # Threshold for significant movement in relative position (normalized units)
 
-     # Initialize the asyncio queue for communication
-    loop = asyncio.new_event_loop()
-    queue = asyncio.Queue()
-
-    # Start the WebSocket handler in a separate thread
-    def run_websocket():
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(websocket_handler(queue))
     
-    ws_thread = Thread(target=run_websocket, daemon=True)
-    ws_thread.start()
+
+    
+    
 
 
     while True:
@@ -330,22 +280,22 @@ def main():
                 print(f"Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
 
                 # Notify SVG converter
-                #notify_svg_conversion(file_path, detected_color, stored_position)
-                queue.put_nowait({
-                "type": "position",
-                "position": {"x": float(relative_position[0]), "y": float(relative_position[1])},
-                "color": detected_color
-                })
-                print("Position data sent to WebSocket.")
+                
+                dataPos = { 
+                    "type": "python", 
+                    "data": { 
+                        "type": "position", 
+                        "position": {"x": float(stored_position[0]), "y": float(stored_position[1])}
+                    } 
+                }
+
+
 
                 file_path = os.path.join(output_directory, "detected_postit.png")
                 cv2.imwrite(file_path, cropped)
                 
-                queue.put_nowait({
-                    "type": "image",
-                    "path": file_path
-                })
-                print("Image data sent to WebSocket.")
+                notify_svg_conversion(file_path, detected_color, stored_position)
+
                 
 
                 while True:
@@ -359,9 +309,6 @@ def main():
                     elif key == ord('q'):
                         cap.release()
                         cv2.destroyAllWindows()
-                        queue.put_nowait(None)  # Signal WebSocket handler to exit
-                        loop.stop()
-                        ws_thread.join()
                         return
                 """ else:
                     print("Validation failed. Discarding image.")
