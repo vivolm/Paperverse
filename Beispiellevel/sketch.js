@@ -777,10 +777,12 @@ socket.onmessage = (ev) => {
 function createSVG(svg) {
   getDrawPosition().then((pos) => {
     if (gameState === "runGame" && svg) {
-      console.log(pos);
       let drawnSVG;
       let levelBodies = Composite.allBodies(world);
       let htmlPath = parseSVG(svg)[0];
+
+      pos.x = map(pos.x, 0, 1, 0, width);
+      pos.y = map(pos.y, 0, 1, 0, height);
 
       // prevent multiple SVG bodies from existing
       if (svgShapes.length > 0) {
