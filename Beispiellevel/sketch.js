@@ -32,11 +32,11 @@ let leftRotating = true;
 let rightRotating = true;
 
 // global variable for data tracking
-// let lastPositionColor = {
-//   x: null,
-//   y: null,
-//   color: null,
-// };
+let lastPositionColor = {
+  x: null,
+  y: null,
+  color: null,
+};
 
 let positionData;
 let svgString;
@@ -292,6 +292,30 @@ function windowResized() {
   createLevel(currentLevel, clear);
 }
 
+async function getDrawPosition() {
+  let position_color = {
+    x: 0,
+    y: 0,
+    color: "",
+  };
+
+  // get the json file and return the positional and color values
+  try {
+    const response = await fetch("../output/position_color.json");
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+    const data = await response.json();
+
+    position_color.x = data.position.x;
+    position_color.y = data.position.y;
+    position_color.color = data.color;
+    return position_color; // Return the position/color object
+  } catch (error) {
+    console.error("There was a problem with the fetch operation:", error);
+  }
+}
+
 function createLevel(levelIndex, clear) {
   // delete all previously created and drawn bodies (e.g. on window resize, level change)
   if (clear) {
@@ -347,11 +371,7 @@ function createLevel(levelIndex, clear) {
         },
         top: {
           x: dim.tutorial.floor.w / 2,
-          y:
-            height -
-            dim.tutorial.floor.h -
-            dim.tutorial.base.h -
-            dim.tutorial.top.h / 2,
+          y: height - dim.tutorial.floor.h - dim.tutorial.base.h - dim.tutorial.top.h / 2,
           w: dim.tutorial.top.w,
           h: dim.tutorial.top.h,
           label: "top",
@@ -662,25 +682,16 @@ Events.on(engine, "collisionStart", function (event) {
 
         // Determine which body is the button and which is the colliding body
         const buttonBody =
-          bodyA.label === "button"
-            ? bodyA
-            : bodyB.label === "button"
-            ? bodyB
-            : null;
+          bodyA.label === "button" ? bodyA : bodyB.label === "button" ? bodyB : null;
         const collidingBody = buttonBody === bodyA ? bodyB : bodyA;
 
         // Check if the colliding body has the required mass and velocity
         if (buttonBody && collidingBody) {
           const collidingMass = collidingBody.mass;
-          const collidingVelocity = Matter.Vector.magnitude(
-            collidingBody.velocity
-          );
+          const collidingVelocity = Matter.Vector.magnitude(collidingBody.velocity);
           // console.log(collidingVelocity);
 
-          if (
-            collidingMass >= massThreshold &&
-            collidingVelocity >= velocityThreshold
-          ) {
+          if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
             // Press the button down
             pressButton(buttonBody);
           }
@@ -695,26 +706,16 @@ Events.on(engine, "collisionStart", function (event) {
         const { bodyA, bodyB } = pair;
 
         // Determine which body is the button and which is the colliding body
-        const snakeBody =
-          bodyA.label === "snake"
-            ? bodyA
-            : bodyB.label === "snake"
-            ? bodyB
-            : null;
+        const snakeBody = bodyA.label === "snake" ? bodyA : bodyB.label === "snake" ? bodyB : null;
         const collidingBody = snakeBody === bodyA ? bodyB : bodyA;
 
         // Check if the colliding body has the required mass and velocity
         if (snakeBody && collidingBody) {
           const collidingMass = collidingBody.mass;
-          const collidingVelocity = Matter.Vector.magnitude(
-            collidingBody.velocity
-          );
+          const collidingVelocity = Matter.Vector.magnitude(collidingBody.velocity);
           // console.log(collidingVelocity);
 
-          if (
-            collidingMass >= massThreshold &&
-            collidingVelocity >= velocityThreshold
-          ) {
+          if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
             // Squash the snake and win level
           }
         }
@@ -741,56 +742,43 @@ socket.addEventListener("open", () => {
 socket.onmessage = (ev) => {
   const message = JSON.parse(ev.data); // Parse the JSON string
 
-  // Handle messages based on their type
-  switch (message.type) {
-    case "svg":
-      createSVG(message.svg);
-      break;
-    case "position":
-      setDrawPosition(message.position);
-      break;
-  }
+  createSVG(message.svg);
 };
 
-function setDrawPosition(pos) {
-  pos.x = map(pos.x, 0, 1, 0, width);
-  pos.y = map(pos.y, 0, 1, 0, height);
-}
+// function simplifySVG(svg) {
+//   let path = new Path(svg);
+//   // Create a new group to hold the simplified paths
+//   const simplifiedGroup = new paper.Group();
+//   const simplifyStrength = 5;
 
-function simplifySVG(svg) {
-  let path = new Path(svg);
-  // Create a new group to hold the simplified paths
-  const simplifiedGroup = new paper.Group();
-  const simplifyStrength = 5;
+//   // simplify logic for different labels of paper.js objects (path, compound, shape)
+//   if (path instanceof paper.Path) {
+//     path.simplify(simplifyStrength);
+//     simplifiedGroup.addChild(path);
+//   }
 
-  // simplify logic for different labels of paper.js objects (path, compound, shape)
-  if (path instanceof paper.Path) {
-    path.simplify(simplifyStrength);
-    simplifiedGroup.addChild(path);
-  }
+//   // else if (child instanceof paper.CompoundPath) {
+//   //   child.simplify(simplifyStrength);
+//   //   simplifiedGroup.addChild(child);
+//   // } else if (child instanceof paper.Shape) {
+//   //   console.log("Shape object ignored");
+//   // }
 
-  // else if (child instanceof paper.CompoundPath) {
-  //   child.simplify(simplifyStrength);
-  //   simplifiedGroup.addChild(child);
-  // } else if (child instanceof paper.Shape) {
-  //   console.log("Shape object ignored");
-  // }
+//   // Export the simplified group back to an SVG string
+//   const svgString = simplifiedGroup.exportSVG({ asString: true });
 
-  // Export the simplified group back to an SVG string
-  const svgString = simplifiedGroup.exportSVG({ asString: true });
-
-  // turn that string into a DOM element
-  const parser = new DOMParser();
-  const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-  const paths = svgDoc.getElementsByTagName("path");
-  return paths;
-}
+//   // turn that string into a DOM element
+//   const parser = new DOMParser();
+//   const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
+//   const paths = svgDoc.getElementsByTagName("path");
+//   return paths;
+// }
 
 function createSVG(svg) {
   if (gameState === "runGame" && svg) {
     let drawnSVG;
     let levelBodies = Composite.allBodies(world);
-    drawableSVG = simplifySVG(svg);
+    let htmlPath = parseSVG(svg)[0];
 
     // prevent multiple SVG bodies from existing
     if (svgShapes.length > 0) {
@@ -807,7 +795,7 @@ function createSVG(svg) {
       {
         x: pos.x,
         y: pos.y,
-        fromPath: drawableSVG[0],
+        fromPath: htmlPath,
         color: "white",
         stroke: "black",
         weight: 2,
@@ -823,4 +811,11 @@ function createSVG(svg) {
       svgShapes.push(drawnSVG);
     }
   }
+}
+
+function parseSVG(svg) {
+  const parser = new DOMParser();
+  const svgDoc = parser.parseFromString(svg, "image/svg+xml");
+  const paths = svgDoc.getElementsByTagName("path");
+  return paths;
 }
