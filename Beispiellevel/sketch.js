@@ -775,42 +775,44 @@ socket.onmessage = (ev) => {
 // }
 
 function createSVG(svg) {
-  if (gameState === "runGame" && svg) {
-    let drawnSVG;
-    let levelBodies = Composite.allBodies(world);
-    let htmlPath = parseSVG(svg)[0];
+  getDrawPosition().then((pos) => {
+    if (gameState === "runGame" && svg) {
+      let drawnSVG;
+      let levelBodies = Composite.allBodies(world);
+      let htmlPath = parseSVG(svg)[0];
 
-    // prevent multiple SVG bodies from existing
-    if (svgShapes.length > 0) {
-      svgShapes.forEach((x) => {
-        x.removeBody();
-      });
+      // prevent multiple SVG bodies from existing
+      if (svgShapes.length > 0) {
+        svgShapes.forEach((x) => {
+          x.removeBody();
+        });
+      }
+
+      svgShapes = [];
+
+      // create svg body from path data
+      drawnSVG = new PolygonFromSVG(
+        world,
+        {
+          x: pos.x,
+          y: pos.y,
+          fromPath: htmlPath,
+          color: "white",
+          stroke: "black",
+          weight: 2,
+        },
+        { isStatic: false, mass: 100, label: "drawnBody" }
+      );
+
+      // remove svg body if it collides with other geometry on spawn
+      if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
+        console.log("collision of svg body with level geometry");
+        drawnSVG.removeBody(world, drawnSVG);
+      } else {
+        svgShapes.push(drawnSVG);
+      }
     }
-
-    svgShapes = [];
-
-    // create svg body from path data
-    drawnSVG = new PolygonFromSVG(
-      world,
-      {
-        x: pos.x,
-        y: pos.y,
-        fromPath: htmlPath,
-        color: "white",
-        stroke: "black",
-        weight: 2,
-      },
-      { isStatic: false, mass: 100, label: "drawnBody" }
-    );
-
-    // remove svg body if it collides with other geometry on spawn
-    if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
-      console.log("collision of svg body with level geometry");
-      drawnSVG.removeBody(world, drawnSVG);
-    } else {
-      svgShapes.push(drawnSVG);
-    }
-  }
+  });
 }
 
 function parseSVG(svg) {
