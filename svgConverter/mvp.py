@@ -260,6 +260,8 @@ def main():
 
             if prev_frame is None:
                 prev_frame = gray_cropped
+                drawing_detected = True  # Assume drawing detected for the first frame
+                no_movement_counter = 0
                 continue
 
             if detect_drawing(prev_frame, gray_cropped):
