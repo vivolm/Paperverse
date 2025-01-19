@@ -95,6 +95,8 @@ function preload() {
 
   //Create Character Sprite with animation size
   stevie = new Sprite(175, 248);
+  //snake = new Sprite(350,496);
+
   //Add every Animation to the Stevie Sprite
   stevie.addAni("angry", angryAnim, 11);
   stevie.addAni("note", noteAnim, 14);
@@ -188,7 +190,6 @@ function draw() {
 
     if (!defaultLock) {
       defaultSequence();
-      console.log("defa");
       defaultLock = true;
     }
   }
@@ -361,6 +362,12 @@ function keyPressed() {
 function windowResized() {
   resizeCanvas();
   createLevel(currentLevel, clear);
+  svgShapes = [];
+  if (svgShapes.length > 0) {
+    svgShapes.forEach((x) => {
+      x.removeBody();
+    });
+  }
 }
 
 async function getDrawPosition() {
@@ -392,6 +399,7 @@ function createLevel(levelIndex, clear) {
   if (clear) {
     Matter.Composite.clear(world);
     drawBodies = [];
+    svgShapes = [];
   }
   // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data
   let dim = {
@@ -408,7 +416,7 @@ function createLevel(levelIndex, clear) {
     },
     snake: {
       floor: { w: width, h: height / 1 / 5 },
-      snake: { x: width - width / 4, y: height / 1 / 5 + 100 },
+      snake: { x: width - width / 3, y: height - height / 1 / 5, w: 350, h: 496 },
     },
     balls: {
       leftWall: { w: width / 3.5, h: height / 2 },
@@ -514,10 +522,10 @@ function createLevel(levelIndex, clear) {
       sensors: {
         snake: {
           x: dim.snake.snake.x,
-          y: dim.snake.snake.y,
+          y: dim.snake.snake.y - dim.snake.snake.h,
           // ADD: Dynamically link asset size
-          w: 50,
-          h: 50,
+          w: dim.snake.snake.w,
+          h: dim.snake.snake.h,
           label: "snake",
         },
       },
@@ -604,7 +612,7 @@ function createLevel(levelIndex, clear) {
       let levelSensor;
       levelSensor = new Block(
         world,
-        { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h },
+        { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" },
         { isStatic: true, isSensor: true, label: sensor.label },
         "CORNER"
       );
@@ -671,7 +679,6 @@ function createLevel(levelIndex, clear) {
             y: button.y,
             w: button.w,
             h: button.h,
-            color: "red",
             stroke: "black",
             weight: 2,
           },
@@ -699,7 +706,6 @@ function createLevel(levelIndex, clear) {
 Events.on(engine, "collisionStart", function (event) {
   if (gameState === "runGame" && drawnSVG) {
     const pairs = event.pairs;
-
     // check win/lose conditions for bridge level
     if (currentLevel === "bridge") {
       let winSensors = [];
@@ -716,13 +722,11 @@ Events.on(engine, "collisionStart", function (event) {
 
       // check if the drawn object spans across the gap
       if (Query.collides(drawnSVG.body, winSensors).length == 2) {
-        console.log("Bridge has been built");
         gameState = "win";
       }
 
       // check if the drawn object is too small for the gap
       if (Query.collides(drawnSVG.body, failSensors).length > 0) {
-        console.log("Object too small!");
         gameState = "failure";
       }
     } else if (currentLevel === "balls") {
@@ -770,14 +774,13 @@ Events.on(engine, "collisionStart", function (event) {
 
         // Determine which body is the button and which is the colliding body
         const buttonBody =
-          bodyA.label === "button" ? bodyA : bodyB.label === "button" ? bodyB : null;
+          bodyA.label === "buttonTop" ? bodyA : bodyB.label === "buttonTop" ? bodyB : null;
         const collidingBody = buttonBody === bodyA ? bodyB : bodyA;
 
         // Check if the colliding body has the required mass and velocity
         if (buttonBody && collidingBody) {
           const collidingMass = collidingBody.mass;
           const collidingVelocity = Matter.Vector.magnitude(collidingBody.velocity);
-          // console.log(collidingVelocity);
 
           if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
             // Press the button down
@@ -788,7 +791,6 @@ Events.on(engine, "collisionStart", function (event) {
     } else if (currentLevel === "snake") {
       // tutorial and puzzle button level
       const massThreshold = 10;
-      const velocityThreshold = 10;
 
       pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
@@ -800,10 +802,8 @@ Events.on(engine, "collisionStart", function (event) {
         // Check if the colliding body has the required mass and velocity
         if (snakeBody && collidingBody) {
           const collidingMass = collidingBody.mass;
-          const collidingVelocity = Matter.Vector.magnitude(collidingBody.velocity);
-          // console.log(collidingVelocity);
 
-          if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
+          if (collidingMass >= massThreshold) {
             // Squash the snake and win level
           }
         }
@@ -866,8 +866,6 @@ socket.onmessage = (ev) => {
 function createSVG(svg, debug) {
   getDrawPosition().then((pos) => {
     if (gameState === "runGame" && svg) {
-      console.log(pos);
-      let drawnSVG;
       let levelBodies = Composite.allBodies(world);
       let htmlPath = parseSVG(svg)[0];
 
