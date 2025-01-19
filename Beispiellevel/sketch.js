@@ -24,7 +24,6 @@ let svgShapes = [];
 let drawableSVG;
 let drawnSVG;
 let backgroundImgs = [];
-let angryAnim;
 let characterBody;
 let leftBall;
 let rightBall;
@@ -44,23 +43,75 @@ let lastPositionColor = {
 let positionData;
 let svgString;
 
+//Anim Var
+let angryAnim;
+let idleAnim;
+let loseAnim;
+let noteAnim;
+let thinkAnim;
+let waitAnim;
+let winAnim;
+
+//Framerate
+let fps = 9;
+let currentFrame = 0;
+let endFrame;
+
+//Hintergründe
+let hgOne;
+let hgTwo;
+let hgThree;
+let hgFour;
+
+//Sound
+let angrySound;
+
 // global game logic
 let gameState = "runGame";
 let currentLevel = "tutorial";
 let levelCount = 4;
 
-function preload() {
-  // load each background and push it to the backgrounds array
-  loadImage("./Assets/level_1_background.jpg", function (img) {
-    backgroundImgs.push(img);
-  });
+//make sure function for default animation sequence is called once
+let defaLock = false;
 
-  // load each animation
-  angryAnim = loadAni("./Assets/Spritesheet.png", {
-    width: 375,
-    height: 500,
-    frames: 11,
-  });
+//Stickman
+let stevie;
+
+function preload() {
+  //load each background image and store it in a variable
+  hgOne = loadImage("./Assets/BG_01.png");
+  hgTwo = loadImage("./Assets/BG_02.png");
+  hgThree = loadImage("./Assets/BG_03.png");
+  hgFour = loadImage("./Assets/BG_04.png");
+
+  // load each animation and set frameDelay to 9 with fps variale
+  angryAnim = loadAni("./Assets/Sprite_Angry.png", { width: 175, height: 248, frames: 11 });
+  idleAnim = loadAni("./Assets/Sprite_Idle.png", { width: 175, height: 248, frames: 18 });
+  loseAnim = loadAni("./Assets/Sprite_Lose.png", { width: 175, height: 248, frames: 17 });
+  noteAnim = loadAni("./Assets/Sprite_Note.png", { width: 175, height: 248, frames: 14 });
+  thinkAnim = loadAni("./Assets/Sprite_Think.png", { width: 175, height: 248, frames: 11 });
+  waitAnim = loadAni("./Assets/Sprite_Wait.png", { width: 175, height: 248, frames: 10 });
+  winAnim = loadAni("./Assets/Sprite_Win.png", { width: 175, height: 248, frames: 13 });
+
+  //Create Character Sprite with animation size
+  stevie = new Sprite(175, 248);
+  //Add every Animation to the Stevie Sprite
+  stevie.addAni("angry", angryAnim, 11);
+  stevie.addAni("note", noteAnim, 14);
+  stevie.addAni("think", thinkAnim, 11);
+  stevie.addAni("wait", waitAnim, 10);
+  //special animations and default state
+  stevie.addAni("idle", idleAnim);
+  stevie.addAni("win", winAnim);
+  stevie.addAni("lose", loseAnim);
+  //Set fps for every animation in Stevie Sprite
+  stevie.anis.frameDelay = fps;
+
+  //Gate still and in motion for instance of winning
+  gateHold = loadAni("./Assets/Sprite_Gate.png", { width: 175, height: 950, frames: [0] });
+  gateAnim = loadAni("./Assets/Sprite_Gate.png", { width: 175, height: 950, frames: 8 });
+  //Set fps Gate Motion animation
+  gateAnim.frameDelay = fps;
 }
 
 function setup() {
@@ -83,61 +134,221 @@ function setup() {
 }
 
 function draw() {
-  // draw all background images NOTE: replace this code as soon as different levels use different background
-  backgroundImgs.forEach((x) => {
-    image(x, 0, 0, width, height);
-  });
+  //Set Sprite Position to Correct Position within frame
+  stevie.x = characterBody.body.position.x;
+  stevie.y = characterBody.body.position.y;
 
-  if (gameState == "runGame") {
-    // draw all bodies and perform special functions (like rotation)
-    drawBodies.forEach((x) => {
-      x.draw();
-    });
+  //Drawing Background, post it placement and Gate Animation
+  if (currentLevel == 1) {
+    backgroundSetup(hgOne);
 
-    if (leftBall && rightBall) {
-      if (leftRotating) {
-        Body.rotate(leftBall.body, radians(-0.5));
-      }
-      if (rightRotating) {
-        Body.rotate(rightBall.body, radians(0.5));
-      }
+    push();
+    rectMode(CENTER);
+    stroke(247, 54, 0);
+    strokeWeight(2);
+    noFill();
+    drawingContext.setLineDash([5, 5]);
+    rect(width / 2, height / 4, 200, 200);
+    pop();
+
+    if (gameState === "runGame") {
+      animation(gateHold, width / 2 + width / 4, height / 2 - height / 9);
     }
+    if (gameState === "win") {
+      animation(gateAnim, width / 2 + width / 4, height / 2 - height / 9);
+      gateAnim.noLoop();
+    }
+  } else if (currentLevel == 2) {
+    backgroundSetup(hgTwo);
+  } else if (currentLevel == 3) {
+    backgroundSetup(hgThree);
+  } else if (currentLevel == 4) {
+    backgroundSetup(hgFour);
   }
 
+  if (leftBall && rightBall) {
+    if (leftRotating) {
+      Body.rotate(leftBall.body, radians(-0.5));
+    }
+    if (rightRotating) {
+      Body.rotate(rightBall.body, radians(0.5));
+    }
+  }
+  // draw all bodies
+  drawBodies.forEach((x) => {
+    x.draw();
+  });
   // draw the handdrawn svg shape
   svgShapes.forEach((x) => {
     x.draw();
   });
 
-  // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
-  if (characterBody) {
-    characterBody.draw();
-    animation(
-      angryAnim,
-      characterBody.body.position.x,
-      characterBody.body.position.y,
-      degrees(characterBody.body.angle)
-    );
+  if (gameState == "runGame") {
+    //set current frame to zero to replay win and lose anims
+    currentFrame = 0;
+
+    // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
+    if (characterBody) {
+      characterBody.draw();
+    }
+
+    if (!defaLock) {
+      defaultSequence();
+      console.log("defa");
+      defaLock = true;
+    }
   }
 
-  // draw post-it placement hint NOTE: Add svg body condition
-  if (currentLevel === "tutorial") {
-    push();
-    rectMode(CENTER);
-    stroke(0);
-    strokeWeight(3);
-    noFill();
-    drawingContext.setLineDash([5, 5]);
-    rect(width / 2, height / 4, 260, 260);
-    pop();
-  }
+  //Diese hier extra, da sie außerhalb des normalen Gameablaufes laufen
   if (gameState === "failure") {
-    // play disappointed char anim here
+    defaLock = false;
+    failSequence();
   }
 
   if (gameState === "win") {
-    // play happy char anim here
+    defaLock = false;
+    winSequence();
   }
+
+  //Schwarzer Rahmen um Spielfeld
+  strokeWeight(10);
+  stroke(0);
+  noFill();
+  rect(5, 5, width - 10, height - 10);
+}
+
+//Different animation sequences for the game - hier audio play implementieren (falls möglich)
+async function defaultSequence() {
+  //Für Soundeffekte aufteilen - aber bis jetzt nicht möglich einzubauen
+  //Beginnt mit der Überrascht Animation
+  //await stevie.changeAni("idle");
+
+  await stevie.changeAni("note");
+  console.log("note ani complete");
+  //"**" >>> TEST remove if contradicitons with code arise - if not implemented note ani will repeat
+  //this is a continouus loop until gamestate chnages
+  await stevie.changeAni(["think", "idle", "think", "idle", "wait", "idle", "**"]);
+  console.log("Default animation sequence is complete");
+
+  //needed when last aniChange Array isnt on loop!!! else recursive calling and crash!!!
+  /*
+  if(defaLock){
+    console.log("return statement");
+    return defaultSequence();
+  }*/
+}
+
+function winSequence() {
+  //Für Soundeffekte aufteilen
+  stevie.changeAni("win");
+  console.log("win animation sequence is active");
+
+  textAlign(CENTER);
+  textSize(250);
+  textStyle(BOLD);
+  fill(0);
+  text("YOU RULE", width / 2, height / 3);
+
+  if (stevie.ani.frame - stevie.ani.lastFrame == 0) {
+    stevie.ani.frame = 0;
+    gateAnim.frame = 0;
+    gateAnim.loop();
+    gameState = "runGame";
+
+    levelChange();
+  }
+}
+
+function failSequence() {
+  stevie.changeAni("lose");
+  console.log("Lose animation sequence is active");
+
+  textAlign(CENTER);
+  textSize(250);
+  textStyle(BOLD);
+  fill(0);
+  text("YOU SUCK", width / 2, height / 3);
+
+  if (stevie.ani.frame - stevie.ani.lastFrame == 0) {
+    stevie.ani.frame = 0;
+    console.log("lose Ani is complete " + defaLock);
+    gameState = "runGame";
+    levelSetBack();
+  }
+}
+
+//Function for easy setup of Background (shorter in Main Code) - not essential
+function backgroundSetup(imageTitle) {
+  image(imageTitle, 0, 0, width, height);
+}
+
+//Level updates according to win ore lose condotion
+function levelChange() {
+  currentLevel++;
+  createLevel(currentLevel, true);
+
+  if (svgShapes.length > 0) {
+    svgShapes.forEach((x) => {
+      x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+    });
+  }
+  svgShapes = []; // remove old SVG bodies from drawing logic
+}
+
+function levelSetBack() {
+  currentLevel = 1;
+  createLevel(currentLevel, true);
+
+  if (svgShapes.length > 0) {
+    svgShapes.forEach((x) => {
+      x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+    });
+  }
+  svgShapes = []; // remove old SVG bodies from drawing logic
+}
+
+function loadSVG(url) {
+  return new Promise((resolve, reject) => {
+    // Ensure that the project is initialized before importing SVG
+    if (paper.project) {
+      paper.project.importSVG(url, (item) => {
+        if (item) {
+          // Create a new group to hold the simplified paths
+          const simplifiedGroup = new paper.Group();
+          const simplifyStrength = 5;
+
+          // Process the loaded SVG item
+          item.children.forEach((child) => {
+            // simplify logic for different types of paper.js objects (path, compound, shape)
+            if (child instanceof paper.Path) {
+              child.simplify(simplifyStrength);
+              simplifiedGroup.addChild(child);
+            } else if (child instanceof paper.CompoundPath) {
+              child.simplify(simplifyStrength);
+              simplifiedGroup.addChild(child);
+            } else if (child instanceof paper.Shape) {
+              console.log("Shape object ignored");
+            }
+          });
+
+          // Export the simplified group back to an SVG string
+          const svgString = simplifiedGroup.exportSVG({ asString: true });
+
+          // turn that string into a DOM element
+          const parser = new DOMParser();
+          const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
+          const paths = svgDoc.getElementsByTagName("path");
+
+          // Resolve the promise with the simplified SVG path data
+          resolve(paths);
+        } else {
+          reject("Failed to load SVG");
+        }
+      });
+    } else {
+      reject("Paper.js project is not initialized");
+    }
+  });
 }
 
 function mousePressed() {
@@ -195,9 +406,11 @@ async function getDrawPosition() {
 
 function createLevel(levelIndex, clear) {
   // delete all previously created and drawn bodies (e.g. on window resize, level change)
+  console.log(clear);
   if (clear) {
     Matter.Composite.clear(world);
     drawBodies = [];
+    console.log("cleared!");
   }
   // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data
   let dim = {
@@ -604,6 +817,7 @@ Events.on(engine, "collisionStart", function (event) {
 function pressButton(button) {
   // Move the button down
   Body.translate(button, { x: 0, y: 10 });
+  gameState = "win";
 
   // Move it back up after a short delay
   setTimeout(() => {
