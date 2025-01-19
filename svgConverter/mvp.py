@@ -17,14 +17,14 @@ if not os.path.exists(output_directory):
 
 
 
-def notify_svg_conversion(cropped_file, color, stored_position):
+def notify_svg_conversion(cropped_file, color, smoothed_position):
     """
     Write a notification to the SVG conversion file indicating a new image is ready.
     """
     with open(notification_file, "w") as f:
         f.write(f"{cropped_file}, {color}")
     print(f"Notification written to {notification_file} - Color: {color}")
-    write_position_to_json(stored_position[0], stored_position[1], color)
+    write_position_to_json(smoothed_position[0], smoothed_position[1], color)
 
 def detect_projection_area(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -247,7 +247,7 @@ def main():
             # Draw the Post-it center
             postit_center = np.mean(postit_rect, axis=0).astype(int)
             cv2.circle(frame, tuple(postit_center), 5, (0, 0, 255), -1)
-
+           
             # Display the smoothed and stored relative positions
             smoothed_text = f"Smoothed Pos: ({smoothed_position[0]:.2f}, {smoothed_position[1]:.2f})"
             stored_text = f"Stored Pos: ({stored_position[0]:.2f}, {stored_position[1]:.2f})"
@@ -296,7 +296,7 @@ def main():
                 file_path = os.path.join(output_directory, "detected_postit.png")
                 cv2.imwrite(file_path, cropped)
                 
-                notify_svg_conversion(file_path, detected_color, stored_position)
+                notify_svg_conversion(file_path, detected_color, relative_position)
 
                 
 
