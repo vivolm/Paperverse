@@ -47,23 +47,27 @@ let hgOne;
 let hgTwo;
 let hgThree;
 let hgFour;
-let hgFive;
+
+//Sound
+let angrySound;
 
 // global game logic
 let gameState = "runGame";
 let currentLevel = 1;
 let finalLevel = 5;
 
+//make sure function for default animation sequence is called once
+let defaLock = false;
+
 //Stickman
 let stevie;
 
 function preload() {
-  //load each background and store it in a variable
-  hgOne = loadImage("./Assets/01_HG.gif");
-  hgTwo = loadImage("./Assets/02_HG.gif");
-  hgThree = loadImage("./Assets/03_HG.gif");
-  hgFour = loadImage("./Assets/04_HG.gif");
-  hgFive = loadImage("./Assets/05_HG.gif");
+  //load each background image and store it in a variable
+  hgOne = loadImage("./Assets/BG_01.png");
+  hgTwo = loadImage("./Assets/BG_02.png");
+  hgThree = loadImage("./Assets/BG_03.png");
+  hgFour = loadImage("./Assets/BG_04.png");
 
   // load each animation and set frameDelay to 9 with fps variale
   angryAnim = loadAni("./Assets/Sprite_Angry.png", {
@@ -105,11 +109,11 @@ function preload() {
   //Create Character Sprite with animation size
   stevie = new Sprite(175, 248);
   //Add every Animation to the Stevie Sprite
-  stevie.addAni("angry", angryAnim);
-  stevie.addAni("note", noteAnim);
-  stevie.addAni("think", thinkAnim);
-  stevie.addAni("wait", waitAnim);
-
+  stevie.addAni("angry", angryAnim, 11);
+  stevie.addAni("note", noteAnim, 14);
+  stevie.addAni("think", thinkAnim, 11);
+  stevie.addAni("wait", waitAnim, 10);
+  //special animations and default state
   stevie.addAni("idle", idleAnim);
   stevie.addAni("win", winAnim);
   stevie.addAni("lose", loseAnim);
@@ -117,16 +121,9 @@ function preload() {
   stevie.anis.frameDelay = fps;
 
   //Gate still and in motion for instance of winning
-  gateHold = loadAni("./Assets/Sprite_Gate.png", {
-    width: 175,
-    height: 950,
-    frames: [0],
-  });
-  gateAnim = loadAni("./Assets/Sprite_Gate.png", {
-    width: 175,
-    height: 950,
-    frames: 8,
-  });
+  gateHold = loadAni("./Assets/Sprite_Gate.png", { width: 175, height: 950, frames: [0] });
+  gateAnim = loadAni("./Assets/Sprite_Gate.png", { width: 175, height: 950, frames: 8 });
+  //Set fps Gate Motion animation
   gateAnim.frameDelay = fps;
 }
 
@@ -165,63 +162,10 @@ function draw() {
   stevie.x = characterBody.body.position.x;
   stevie.y = characterBody.body.position.y;
 
+  //Drawing Background, post it placement and Gate Animation
   if (currentLevel == 1) {
-    image(hgOne, 0, 0, width, height);
-    if (gameState === "runGame") {
-      animation(gateHold, width / 2 + width / 4, height / 2);
-    }
-    if (gameState === "win") {
-      animation(gateAnim, width / 2 + width / 4, height / 2);
-      gateAnim.noLoop();
-    }
-  } else if (currentLevel == 2) {
-    image(hgThree, 0, 0, width, height);
-  } else if (currentLevel == 3) {
-    image(hgFour, 0, 0, width, height);
-  } else if (currentLevel == 4) {
-    image(hgFive, 0, 0, width, height);
-  }
+    backgroundSetup(hgOne);
 
-  // draw all bodies
-  drawBodies.forEach((x) => {
-    x.draw();
-  });
-
-  // draw the handdrawn svg shape
-  svgShapes.forEach((x) => {
-    x.draw();
-  });
-
-  if (gameState == "runGame") {
-    // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
-    if (characterBody) {
-      characterBody.draw();
-
-      //Placeholder Anforderungen für das Abspielen der verschiedenen Animationen
-      if (key === "a") {
-        stevie.changeAni("angry");
-        playOnce(angryAnim);
-      } else if (key === "s") {
-        stevie.changeAni("note");
-        playOnce(noteAnim);
-      } else if (key === "d") {
-        stevie.changeAni("think");
-        playOnce(thinkAnim);
-      }
-
-      //Condition einricht, wenn Männchen von SVG getroffen wird
-      else if (key === "f") {
-        stevie.changeAni("wait");
-        playOnce(waitAnim);
-      } else {
-        //Idle Animation als Default
-        playIdle();
-      }
-    }
-  }
-
-  // draw post-it placement hint NOTE: Add svg body condition
-  if (currentLevel == 1) {
     push();
     rectMode(CENTER);
     stroke(247, 54, 0);
@@ -230,15 +174,56 @@ function draw() {
     drawingContext.setLineDash([5, 5]);
     rect(width / 2, height / 4, 200, 200);
     pop();
+
+    if (gameState === "runGame") {
+      animation(gateHold, width / 2 + width / 4, height / 2 - height / 9);
+    }
+    if (gameState === "win") {
+      animation(gateAnim, width / 2 + width / 4, height / 2 - height / 9);
+      gateAnim.noLoop();
+    }
+  } else if (currentLevel == 2) {
+    backgroundSetup(hgTwo);
+  } else if (currentLevel == 3) {
+    backgroundSetup(hgThree);
+  } else if (currentLevel == 4) {
+    backgroundSetup(hgFour);
+  }
+
+  // draw all bodies
+  drawBodies.forEach((x) => {
+    x.draw();
+  });
+  // draw the handdrawn svg shape
+  svgShapes.forEach((x) => {
+    x.draw();
+  });
+
+  if (gameState == "runGame") {
+    //set current frame to zero to replay win and lose anims
+    currentFrame = 0;
+
+    // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
+    if (characterBody) {
+      characterBody.draw();
+    }
+
+    if (!defaLock) {
+      defaultSequence();
+      console.log("defa");
+      defaLock = true;
+    }
   }
 
   //Diese hier extra, da sie außerhalb des normalen Gameablaufes laufen
   if (gameState === "failure") {
-    failScreen();
+    defaLock = false;
+    failSequence();
   }
 
   if (gameState === "win") {
-    winScreen();
+    defaLock = false;
+    winSequence();
   }
 
   //Schwarzer Rahmen um Spielfeld
@@ -248,84 +233,94 @@ function draw() {
   rect(5, 5, width - 10, height - 10);
 }
 
-//Play Animation once then return back to idle state until key is called - funktioniert auch it sprite
-function playOnce(aniTitle) {
-  endFrame = aniTitle.lastFrame;
-  //play Animation only once
-  if (currentFrame <= endFrame) {
-    currentFrame += 6 / 60;
-    aniTitle.loop();
-  }
-  //return to idleState
-  else {
-    aniTitle.stop();
-    key = "i";
-  }
+//Different animation sequences for the game - hier audio play implementieren (falls möglich)
+async function defaultSequence() {
+  //Für Soundeffekte aufteilen - aber bis jetzt nicht möglich einzubauen
+  //Beginnt mit der Überrascht Animation
+  //await stevie.changeAni("idle");
+
+  await stevie.changeAni("note");
+  console.log("note ani complete");
+  //"**" >>> TEST remove if contradicitons with code arise - if not implemented note ani will repeat
+  //this is a continouus loop until gamestate chnages
+  await stevie.changeAni(["think", "idle", "think", "idle", "wait", "idle", "**"]);
+  console.log("Default animation sequence is complete");
+
+  //needed when last aniChange Array isnt on loop!!! else recursive calling and crash!!!
+  /*
+  if(defaLock){
+    console.log("return statement");
+    return defaultSequence();
+  }*/
 }
 
-function playIdle() {
-  stevie.changeAni("idle");
-
-  //Zurücksetzen aller Frames
-  angryAnim.frame = 0;
-  loseAnim.frame = 0;
-  noteAnim.frame = 0;
-  thinkAnim.frame = 0;
-  waitAnim.frame = 0;
-  winAnim.frame = 0;
-
-  //zurücksetzen der Frame Werte für Neustart der spezifischen Animationen
-  currentFrame = 0;
-  endFrame = 0;
-}
-
-function failScreen() {
-  characterBody.draw();
-  stevie.changeAni("lose");
-
-  textAlign(CENTER);
-  textSize(350);
-  textStyle(BOLD);
-  fill(0);
-  text("YOU SUCK", width / 2, height / 3);
-
-  if (currentFrame <= animations.lose.lastFrame) {
-    currentFrame += 6 / 60;
-    animations.lose.loop();
-  }
-  //return to idleState
-  else {
-    animations.lose.stop();
-    gameState = "runGame";
-
-    levelSetBack();
-  }
-}
-
-function winScreen() {
-  characterBody.draw();
+function winSequence() {
+  //Für Soundeffekte aufteilen
   stevie.changeAni("win");
+  console.log("win animation sequence is active");
 
   textAlign(CENTER);
-  textSize(350);
+  textSize(250);
   textStyle(BOLD);
   fill(0);
   text("YOU RULE", width / 2, height / 3);
 
-  //Make sure Screen lasts as long as animation
-  if (currentFrame <= animations.win.lastFrame) {
-    currentFrame += 6 / 60;
-    animations.win.loop();
-  }
-  //return to idleState and runGame-Status
-  else {
-    winAnim.stop();
+  if (stevie.ani.frame - stevie.ani.lastFrame == 0) {
+    stevie.ani.frame = 0;
     gateAnim.frame = 0;
     gateAnim.loop();
     gameState = "runGame";
 
     levelChange();
   }
+}
+
+function failSequence() {
+  stevie.changeAni("lose");
+  console.log("Lose animation sequence is active");
+
+  textAlign(CENTER);
+  textSize(250);
+  textStyle(BOLD);
+  fill(0);
+  text("YOU SUCK", width / 2, height / 3);
+
+  if (stevie.ani.frame - stevie.ani.lastFrame == 0) {
+    stevie.ani.frame = 0;
+    console.log("lose Ani is complete " + defaLock);
+    gameState = "runGame";
+    levelSetBack();
+  }
+}
+
+//Function for easy setup of Background (shorter in Main Code) - not essential
+function backgroundSetup(imageTitle) {
+  image(imageTitle, 0, 0, width, height);
+}
+
+//Level updates according to win ore lose condotion
+function levelChange() {
+  currentLevel++;
+  createLevel(currentLevel, true);
+
+  if (svgShapes.length > 0) {
+    svgShapes.forEach((x) => {
+      x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+    });
+  }
+  svgShapes = []; // remove old SVG bodies from drawing logic
+}
+
+function levelSetBack() {
+  currentLevel = 1;
+  createLevel(currentLevel, true);
+
+  if (svgShapes.length > 0) {
+    svgShapes.forEach((x) => {
+      x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+    });
+  }
+  svgShapes = []; // remove old SVG bodies from drawing logic
 }
 
 function loadSVG(url) {
@@ -440,30 +435,6 @@ function mousePressed() {
   }
 }*/
 
-function levelChange() {
-  currentLevel++;
-  createLevel(currentLevel, true);
-
-  if (svgShapes.length > 0) {
-    svgShapes.forEach((x) => {
-      x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-    });
-  }
-  svgShapes = []; // remove old SVG bodies from drawing logic
-}
-
-function levelSetBack() {
-  currentLevel = 1;
-  createLevel(currentLevel, true);
-
-  if (svgShapes.length > 0) {
-    svgShapes.forEach((x) => {
-      x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-    });
-  }
-  svgShapes = []; // remove old SVG bodies from drawing logic
-}
-
 function windowResized() {
   resizeCanvas();
   createLevel(currentLevel, clear);
@@ -537,10 +508,7 @@ function createLevel(levelIndex, clear) {
       button: [
         {
           x: levelDims[2].dimensions[0].w / 2,
-          y:
-            height -
-            levelDims[2].dimensions[0].h -
-            levelDims[2].dimensions[1].h / 2,
+          y: height - levelDims[2].dimensions[0].h - levelDims[2].dimensions[1].h / 2,
           w: levelDims[2].dimensions[1].w,
           h: levelDims[2].dimensions[1].h,
           type: "base",
@@ -583,12 +551,9 @@ function createLevel(levelIndex, clear) {
       ],
       sensors: [
         {
-          x:
-            levelDims[3].dimensions[0].w / 2 + levelDims[3].dimensions[0].w / 2,
+          x: levelDims[3].dimensions[0].w / 2 + levelDims[3].dimensions[0].w / 2,
           y: height - 20,
-          w:
-            width -
-            (levelDims[3].dimensions[0].w + levelDims[3].dimensions[1].w),
+          w: width - (levelDims[3].dimensions[0].w + levelDims[3].dimensions[1].w),
           h: 100,
           type: "fail",
         },
@@ -607,10 +572,7 @@ function createLevel(levelIndex, clear) {
           type: "win",
         },
         {
-          x:
-            width -
-            levelDims[3].dimensions[1].w / 2 -
-            levelDims[3].dimensions[1].w / 2,
+          x: width - levelDims[3].dimensions[1].w / 2 - levelDims[3].dimensions[1].w / 2,
           y:
             height -
             levelDims[3].dimensions[1].h / 2 -
@@ -655,17 +617,9 @@ function createLevel(levelIndex, clear) {
         {
           x:
             levelDims[4].dimensions[0].w +
-            (width -
-              levelDims[4].dimensions[0].w -
-              levelDims[4].dimensions[1].w) /
-              2,
+            (width - levelDims[4].dimensions[0].w - levelDims[4].dimensions[1].w) / 2,
           y: levelDims[4].dimensions[0].h,
-          r:
-            ((width -
-              levelDims[4].dimensions[0].w -
-              levelDims[4].dimensions[1].w) /
-              2) *
-            0.7,
+          r: ((width - levelDims[4].dimensions[0].w - levelDims[4].dimensions[1].w) / 2) * 0.7,
         },
       ],
       char: {
@@ -880,25 +834,16 @@ Events.on(engine, "collisionStart", function (event) {
 
         // Determine which body is the button and which is the colliding body
         const buttonBody =
-          bodyA.label === "button"
-            ? bodyA
-            : bodyB.label === "button"
-            ? bodyB
-            : null;
+          bodyA.label === "button" ? bodyA : bodyB.label === "button" ? bodyB : null;
         const collidingBody = buttonBody === bodyA ? bodyB : bodyA;
 
         // Check if the colliding body has the required mass and velocity
         if (buttonBody && collidingBody) {
           const collidingMass = collidingBody.mass;
-          const collidingVelocity = Matter.Vector.magnitude(
-            collidingBody.velocity
-          );
+          const collidingVelocity = Matter.Vector.magnitude(collidingBody.velocity);
           console.log(collidingVelocity);
 
-          if (
-            collidingMass >= massThreshold &&
-            collidingVelocity >= velocityThreshold
-          ) {
+          if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
             // Press the button down
             pressButton(buttonBody);
           }
