@@ -77,6 +77,11 @@ let defaultLock = false;
 //Stickman
 let stevie;
 
+// new rendering test
+let fabricCanvas;
+let svgObject;
+let examplePath = "M 10 10 L 50 10 L 30 40 Z";
+
 function preload() {
   //load each background image and store it in a variable
   hgOne = loadImage("./Assets/BG_01.png");
@@ -118,11 +123,17 @@ function preload() {
 
 function setup() {
   const canvas = createCanvas(windowWidth, windowHeight + 10);
-  canvas.parent("sketch-holder");
+  canvas.parent("canvasWrapper");
 
   // set paper.js working space to p5.js canvas
-  canvas.id("myCanvas");
-  paper.setup("myCanvas");
+  canvas.id("p5canvas");
+  // paper.setup("p5canvas");
+
+  fabricCanvas = new fabric.Canvas("fabricCanvas", {
+    width: width,
+    height: height,
+    selection: false,
+  });
 
   resizeCanvas(windowWidth, windowHeight + 10);
 
@@ -180,9 +191,9 @@ function draw() {
     x.draw();
   });
   // draw the handdrawn svg shape
-  svgShapes.forEach((x) => {
-    x.draw();
-  });
+  // svgShapes.forEach((x) => {
+  //   x.draw();
+  // });
 
   if (gameState == "runGame") {
     //set current frame to zero to replay win and lose anims
@@ -210,6 +221,54 @@ function draw() {
   stroke(0);
   noFill();
   rect(5, 5, width - 10, height - 10);
+
+  // Update the Fabric.js object position based on the Matter.js body
+  if (svgObject) {
+    const matterPosition = drawnSVG.body.position; // Get the Matter.js body position
+    const angle = drawnSVG.body.angle; // Get the current angle of the Matter.js body
+
+    // Fixed visual offsets
+    const visualOffsetX = 8; // Your fixed offset in the X direction
+    const visualOffsetY = 10; // Your fixed offset in the Y direction
+
+    // Calculate the adjusted offsets based on the angle
+    const adjustedOffsetX = visualOffsetX * Math.cos(angle) - visualOffsetY * Math.sin(angle);
+    const adjustedOffsetY = visualOffsetX * Math.sin(angle) + visualOffsetY * Math.cos(angle);
+
+    svgObject.set({
+      left: matterPosition.x + adjustedOffsetX,
+      top: matterPosition.y + adjustedOffsetY,
+      angle: degrees(angle), // Update angle if needed
+    });
+
+    svgObject.setCoords(); // Update the coordinates
+  }
+
+  fabricCanvas.renderAll();
+}
+
+function spawnSVG(pathString) {
+  fabricCanvas.remove(svgObject);
+
+  svgObject = new fabric.Path(pathString, {
+    originX: "center",
+    originY: "center",
+    fill: "transparent",
+    stroke: "black",
+    strokeWidth: 4,
+  });
+
+  // const boundingRect = svgObject.getBoundingRect();
+
+  const visualOffsetX = 8; // Adjust this value based on your observations
+  const visualOffsetY = 10; // Adjust this value based on your observations
+
+  svgObject.set({
+    left: drawnSVG.body.position.x + visualOffsetX,
+    top: drawnSVG.body.position.y + visualOffsetY,
+  });
+
+  fabricCanvas.add(svgObject);
 }
 
 //Different animation sequences for the game - hier audio play implementieren (falls möglich)
@@ -336,7 +395,14 @@ function backgroundSetup(imageTitle) {
 // }
 
 function mousePressed() {
-  createSVG(exampleSVG.svg, true);
+  createSVG(exampleSVG.svg, true)
+    .then((pathElement) => {
+      const pathString = pathElement.getAttribute("d");
+      spawnSVG(pathString); // Pass the drawnSVG to the spawnSVG function
+    })
+    .catch((error) => {
+      console.error("Error creating SVG:", error);
+    });
 }
 
 // Change the current level on key press
@@ -610,12 +676,7 @@ function createLevel(levelIndex, clear) {
   if (level.sensors) {
     Object.values(level.sensors).forEach((sensor) => {
       let levelSensor;
-      levelSensor = new Block(
-        world,
-        { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" },
-        { isStatic: true, isSensor: true, label: sensor.label },
-        "CORNER"
-      );
+      levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" }, { isStatic: true, isSensor: true, label: sensor.label }, "CORNER");
       drawBodies.push(levelSensor);
     });
   }
@@ -692,11 +753,7 @@ function createLevel(levelIndex, clear) {
   // Create character
   if (level.char) {
     const char = level.char;
-    characterBody = new Block(
-      world,
-      { x: char.x, y: char.y, w: char.w, h: char.h, color: "black" },
-      { restitution: 0.5, friction: 0.5 }
-    );
+    characterBody = new Block(world, { x: char.x, y: char.y, w: char.w, h: char.h, color: "black" }, { restitution: 0.5, friction: 0.5 });
     // show char collision box for debugging purposes
     // drawBodies.push(characterBody);
   }
@@ -751,16 +808,9 @@ Events.on(engine, "collisionStart", function (event) {
           if (Math.abs(depth) > 10) {
             console.log(collisionRecord[1].bodyA.label);
             console.log(collisionRecord[1].bodyB.label);
-            if (
-              collisionRecord[1].bodyA.label === "leftBall" ||
-              collisionRecord[1].bodyB.label === "leftBall"
-            ) {
+            if (collisionRecord[1].bodyA.label === "leftBall" || collisionRecord[1].bodyB.label === "leftBall") {
               leftRotating = false;
-            } else if (
-              collisionRecord[1].bodyA.label === "rightBall" ||
-              collisionRecord[1].bodyB.label === "rightBall"
-            )
-              rightRotating = false;
+            } else if (collisionRecord[1].bodyA.label === "rightBall" || collisionRecord[1].bodyB.label === "rightBall") rightRotating = false;
           }
         }
       }
@@ -773,8 +823,7 @@ Events.on(engine, "collisionStart", function (event) {
         const { bodyA, bodyB } = pair;
 
         // Determine which body is the button and which is the colliding body
-        const buttonBody =
-          bodyA.label === "buttonTop" ? bodyA : bodyB.label === "buttonTop" ? bodyB : null;
+        const buttonBody = bodyA.label === "buttonTop" ? bodyA : bodyB.label === "buttonTop" ? bodyB : null;
         const collidingBody = buttonBody === bodyA ? bodyB : bodyA;
 
         // Check if the colliding body has the required mass and velocity
@@ -864,51 +913,61 @@ socket.onmessage = (ev) => {
 // }
 
 function createSVG(svg, debug) {
-  getDrawPosition().then((pos) => {
-    if (gameState === "runGame" && svg) {
-      let levelBodies = Composite.allBodies(world);
-      let htmlPath = parseSVG(svg)[0];
+  return new Promise((resolve, reject) => {
+    getDrawPosition()
+      .then((pos) => {
+        if (gameState === "runGame" && svg) {
+          let levelBodies = Composite.allBodies(world);
+          let htmlPath = parseSVG(svg)[0];
+          console.log(htmlPath);
 
-      if (!debug) {
-        pos.x = map(pos.x, 0, 1, 0, width);
-        pos.y = map(pos.y, 0, 1, 0, height);
-      } else if (debug) {
-        pos.x = mouseX;
-        pos.y = mouseY;
-      }
+          if (!debug) {
+            pos.x = map(pos.x, 0, 1, 0, width);
+            pos.y = map(pos.y, 0, 1, 0, height);
+          } else {
+            pos.x = mouseX;
+            pos.y = mouseY;
+          }
 
-      // prevent multiple SVG bodies from existing
-      if (svgShapes.length > 0) {
-        svgShapes.forEach((x) => {
-          x.removeBody();
-        });
-      }
+          // prevent multiple SVG bodies from existing
+          if (svgShapes.length > 0) {
+            svgShapes.forEach((x) => {
+              x.removeBody();
+            });
+          }
 
-      svgShapes = [];
+          svgShapes = [];
 
-      // create svg body from path data
-      drawnSVG = new PolygonFromSVG(
-        world,
-        {
-          x: pos.x,
-          y: pos.y,
-          fromPath: htmlPath,
-          color: "white",
-          stroke: "black",
-          weight: 2,
-        },
-        { isStatic: false, mass: 100, label: "drawnBody" }
-      );
+          // create svg body from path data
+          drawnSVG = new PolygonFromSVG(
+            world,
+            {
+              x: pos.x,
+              y: pos.y,
+              fromPath: htmlPath,
+              color: "white",
+              stroke: "black",
+              weight: 2,
+            },
+            { isStatic: false, mass: 100, label: "drawnBody" }
+          );
 
-      // remove svg body if it collides with other geometry on spawn
-      if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
-        console.log("collision of svg body with level geometry");
-        drawnSVG.removeBody(world, drawnSVG);
-      } else {
-        svgShapes.push(drawnSVG);
-        console.log(drawnSVG);
-      }
-    }
+          // remove svg body if it collides with other geometry on spawn
+          if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
+            console.log("collision of svg body with level geometry");
+            drawnSVG.removeBody(world, drawnSVG);
+            reject(new Error("Collision detected, SVG body removed."));
+          } else {
+            svgShapes.push(drawnSVG);
+            resolve(htmlPath); // Resolve the promise with the drawnSVG
+          }
+        } else {
+          reject(new Error("Invalid game state or SVG not provided."));
+        }
+      })
+      .catch((error) => {
+        reject(error); // Handle any errors from getDrawPosition
+      });
   });
 }
 
