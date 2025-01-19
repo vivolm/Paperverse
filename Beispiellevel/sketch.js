@@ -72,7 +72,7 @@ let currentLevel = "tutorial";
 let levelCount = 4;
 
 //make sure function for default animation sequence is called once
-let defaLock = false;
+let defaultLock = false;
 
 //Stickman
 let stevie;
@@ -124,9 +124,6 @@ function setup() {
 
   resizeCanvas(windowWidth, windowHeight + 10);
 
-  // scale down the animation asset
-  angryAnim.scale = 0.5;
-
   createLevel(currentLevel);
 
   // run the physics engine
@@ -135,11 +132,13 @@ function setup() {
 
 function draw() {
   //Set Sprite Position to Correct Position within frame
-  stevie.x = characterBody.body.position.x;
-  stevie.y = characterBody.body.position.y;
+  if (characterBody) {
+    stevie.x = characterBody.body.position.x;
+    stevie.y = characterBody.body.position.y;
+  }
 
   //Drawing Background, post it placement and Gate Animation
-  if (currentLevel == 1) {
+  if (currentLevel === "tutorial") {
     backgroundSetup(hgOne);
 
     push();
@@ -158,11 +157,11 @@ function draw() {
       animation(gateAnim, width / 2 + width / 4, height / 2 - height / 9);
       gateAnim.noLoop();
     }
-  } else if (currentLevel == 2) {
+  } else if (currentLevel === "bridge") {
     backgroundSetup(hgTwo);
-  } else if (currentLevel == 3) {
+  } else if (currentLevel === "snake") {
     backgroundSetup(hgThree);
-  } else if (currentLevel == 4) {
+  } else if (currentLevel === "balls") {
     backgroundSetup(hgFour);
   }
 
@@ -187,26 +186,21 @@ function draw() {
     //set current frame to zero to replay win and lose anims
     currentFrame = 0;
 
-    // draw and animate the character NOTE: Expand this logic as soon as multiple char anims are present
-    if (characterBody) {
-      characterBody.draw();
-    }
-
-    if (!defaLock) {
+    if (!defaultLock) {
       defaultSequence();
       console.log("defa");
-      defaLock = true;
+      defaultLock = true;
     }
   }
 
   //Diese hier extra, da sie außerhalb des normalen Gameablaufes laufen
   if (gameState === "failure") {
-    defaLock = false;
+    defaultLock = false;
     failSequence();
   }
 
   if (gameState === "win") {
-    defaLock = false;
+    defaultLock = false;
     winSequence();
   }
 
@@ -224,18 +218,7 @@ async function defaultSequence() {
   //await stevie.changeAni("idle");
 
   await stevie.changeAni("note");
-  console.log("note ani complete");
-  //"**" >>> TEST remove if contradicitons with code arise - if not implemented note ani will repeat
-  //this is a continouus loop until gamestate chnages
   await stevie.changeAni(["think", "idle", "think", "idle", "wait", "idle", "**"]);
-  console.log("Default animation sequence is complete");
-
-  //needed when last aniChange Array isnt on loop!!! else recursive calling and crash!!!
-  /*
-  if(defaLock){
-    console.log("return statement");
-    return defaultSequence();
-  }*/
 }
 
 function winSequence() {
@@ -255,7 +238,7 @@ function winSequence() {
     gateAnim.loop();
     gameState = "runGame";
 
-    levelChange();
+    // levelChange();
   }
 }
 
@@ -271,9 +254,9 @@ function failSequence() {
 
   if (stevie.ani.frame - stevie.ani.lastFrame == 0) {
     stevie.ani.frame = 0;
-    console.log("lose Ani is complete " + defaLock);
+    console.log("lose Ani is complete " + defaultLock);
     gameState = "runGame";
-    levelSetBack();
+    // levelSetBack();
   }
 }
 
@@ -283,73 +266,73 @@ function backgroundSetup(imageTitle) {
 }
 
 //Level updates according to win ore lose condotion
-function levelChange() {
-  currentLevel++;
-  createLevel(currentLevel, true);
+// function levelChange() {
+//   currentLevel++;
+//   createLevel(currentLevel, true);
 
-  if (svgShapes.length > 0) {
-    svgShapes.forEach((x) => {
-      x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-    });
-  }
-  svgShapes = []; // remove old SVG bodies from drawing logic
-}
+//   if (svgShapes.length > 0) {
+//     svgShapes.forEach((x) => {
+//       x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+//     });
+//   }
+//   svgShapes = []; // remove old SVG bodies from drawing logic
+// }
 
-function levelSetBack() {
-  currentLevel = 1;
-  createLevel(currentLevel, true);
+// function levelSetBack() {
+//   currentLevel = 1;
+//   createLevel(currentLevel, true);
 
-  if (svgShapes.length > 0) {
-    svgShapes.forEach((x) => {
-      x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-    });
-  }
-  svgShapes = []; // remove old SVG bodies from drawing logic
-}
+//   if (svgShapes.length > 0) {
+//     svgShapes.forEach((x) => {
+//       x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
+//     });
+//   }
+//   svgShapes = []; // remove old SVG bodies from drawing logic
+// }
 
-function loadSVG(url) {
-  return new Promise((resolve, reject) => {
-    // Ensure that the project is initialized before importing SVG
-    if (paper.project) {
-      paper.project.importSVG(url, (item) => {
-        if (item) {
-          // Create a new group to hold the simplified paths
-          const simplifiedGroup = new paper.Group();
-          const simplifyStrength = 5;
+// function loadSVG(url) {
+//   return new Promise((resolve, reject) => {
+//     // Ensure that the project is initialized before importing SVG
+//     if (paper.project) {
+//       paper.project.importSVG(url, (item) => {
+//         if (item) {
+//           // Create a new group to hold the simplified paths
+//           const simplifiedGroup = new paper.Group();
+//           const simplifyStrength = 5;
 
-          // Process the loaded SVG item
-          item.children.forEach((child) => {
-            // simplify logic for different types of paper.js objects (path, compound, shape)
-            if (child instanceof paper.Path) {
-              child.simplify(simplifyStrength);
-              simplifiedGroup.addChild(child);
-            } else if (child instanceof paper.CompoundPath) {
-              child.simplify(simplifyStrength);
-              simplifiedGroup.addChild(child);
-            } else if (child instanceof paper.Shape) {
-              console.log("Shape object ignored");
-            }
-          });
+//           // Process the loaded SVG item
+//           item.children.forEach((child) => {
+//             // simplify logic for different types of paper.js objects (path, compound, shape)
+//             if (child instanceof paper.Path) {
+//               child.simplify(simplifyStrength);
+//               simplifiedGroup.addChild(child);
+//             } else if (child instanceof paper.CompoundPath) {
+//               child.simplify(simplifyStrength);
+//               simplifiedGroup.addChild(child);
+//             } else if (child instanceof paper.Shape) {
+//               console.log("Shape object ignored");
+//             }
+//           });
 
-          // Export the simplified group back to an SVG string
-          const svgString = simplifiedGroup.exportSVG({ asString: true });
+//           // Export the simplified group back to an SVG string
+//           const svgString = simplifiedGroup.exportSVG({ asString: true });
 
-          // turn that string into a DOM element
-          const parser = new DOMParser();
-          const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-          const paths = svgDoc.getElementsByTagName("path");
+//           // turn that string into a DOM element
+//           const parser = new DOMParser();
+//           const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
+//           const paths = svgDoc.getElementsByTagName("path");
 
-          // Resolve the promise with the simplified SVG path data
-          resolve(paths);
-        } else {
-          reject("Failed to load SVG");
-        }
-      });
-    } else {
-      reject("Paper.js project is not initialized");
-    }
-  });
-}
+//           // Resolve the promise with the simplified SVG path data
+//           resolve(paths);
+//         } else {
+//           reject("Failed to load SVG");
+//         }
+//       });
+//     } else {
+//       reject("Paper.js project is not initialized");
+//     }
+//   });
+// }
 
 function mousePressed() {
   createSVG(exampleSVG.svg, true);
@@ -406,17 +389,13 @@ async function getDrawPosition() {
 
 function createLevel(levelIndex, clear) {
   // delete all previously created and drawn bodies (e.g. on window resize, level change)
-  console.log(clear);
   if (clear) {
     Matter.Composite.clear(world);
     drawBodies = [];
-    console.log("cleared!");
   }
   // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data
   let dim = {
-    char: {
-      scale: 0.5,
-    },
+    char: { x: 0 + width / 4, y: height - height / 1 / 5 },
     tutorial: {
       floor: { w: width, h: height / 1 / 5 },
       base: { w: width / 6, h: height / 12 },
@@ -467,6 +446,12 @@ function createLevel(levelIndex, clear) {
           label: "top",
         },
       },
+      char: {
+        x: dim.char.x,
+        y: dim.char.y,
+        w: angryAnim.width,
+        h: angryAnim.height,
+      },
     },
     bridge: {
       // bridge level
@@ -509,10 +494,10 @@ function createLevel(levelIndex, clear) {
         },
       },
       char: {
-        x: dim.bridge.leftCliff.w / 2,
-        y: height / 2,
-        w: angryAnim.width * dim.char.scale,
-        h: angryAnim.height * dim.char.scale,
+        x: dim.char.x,
+        y: dim.char.y,
+        w: angryAnim.width,
+        h: angryAnim.height,
       },
     },
     snake: {
@@ -535,6 +520,12 @@ function createLevel(levelIndex, clear) {
           h: 50,
           label: "snake",
         },
+      },
+      char: {
+        x: dim.char.x,
+        y: dim.char.y,
+        w: angryAnim.width,
+        h: angryAnim.height,
       },
     },
     balls: {
@@ -573,6 +564,12 @@ function createLevel(levelIndex, clear) {
           r: dim.balls.radius,
           label: "rightBall",
         },
+      },
+      char: {
+        x: dim.char.x,
+        y: dim.char.y,
+        w: angryAnim.width,
+        h: angryAnim.height,
       },
     },
   };
@@ -690,20 +687,21 @@ function createLevel(levelIndex, clear) {
     const char = level.char;
     characterBody = new Block(
       world,
-      { x: char.x, y: char.y, w: char.w, h: char.h },
+      { x: char.x, y: char.y, w: char.w, h: char.h, color: "black" },
       { restitution: 0.5, friction: 0.5 }
     );
+    // show char collision box for debugging purposes
+    // drawBodies.push(characterBody);
   }
 }
 
 // check for win/lose conditions by detecting collisions
 Events.on(engine, "collisionStart", function (event) {
-  // ADD: drawnSVG condition back
-  if (gameState === "runGame") {
+  if (gameState === "runGame" && drawnSVG) {
     const pairs = event.pairs;
 
     // check win/lose conditions for bridge level
-    if (currentLevel === "bridge" && drawnSVG) {
+    if (currentLevel === "bridge") {
       let winSensors = [];
       let failSensors = [];
 
