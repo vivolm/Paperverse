@@ -21,8 +21,7 @@ const socket = new WebSocket("ws://localhost:8080");
 // global variables for tracking bodies & assets
 let drawBodies = [];
 let svgShapes = [];
-let drawableSVG;
-let drawnSVG;
+let matterSVG;
 let backgroundImgs = [];
 let characterBody;
 let leftBall;
@@ -69,10 +68,11 @@ let angrySound;
 // global game logic
 let gameState = "runGame";
 let currentLevel = "tutorial";
-let levelCount = 4;
 
 //make sure function for default animation sequence is called once
 let defaultLock = false;
+
+let lastVelocity = { x: 0, y: 0 }; // Variable to store the last velocity
 
 //Stickman
 let stevie;
@@ -182,6 +182,7 @@ function draw() {
   // draw the handdrawn svg shape
   svgShapes.forEach((x) => {
     x.draw();
+    console.log(x.body.velocity.y);
   });
 
   if (gameState == "runGame") {
@@ -291,52 +292,21 @@ function backgroundSetup(imageTitle) {
 //   svgShapes = []; // remove old SVG bodies from drawing logic
 // }
 
-// function loadSVG(url) {
-//   return new Promise((resolve, reject) => {
-//     // Ensure that the project is initialized before importing SVG
-//     if (paper.project) {
-//       paper.project.importSVG(url, (item) => {
-//         if (item) {
-//           // Create a new group to hold the simplified paths
-//           const simplifiedGroup = new paper.Group();
-//           const simplifyStrength = 5;
-
-//           // Process the loaded SVG item
-//           item.children.forEach((child) => {
-//             // simplify logic for different types of paper.js objects (path, compound, shape)
-//             if (child instanceof paper.Path) {
-//               child.simplify(simplifyStrength);
-//               simplifiedGroup.addChild(child);
-//             } else if (child instanceof paper.CompoundPath) {
-//               child.simplify(simplifyStrength);
-//               simplifiedGroup.addChild(child);
-//             } else if (child instanceof paper.Shape) {
-//               console.log("Shape object ignored");
-//             }
-//           });
-
-//           // Export the simplified group back to an SVG string
-//           const svgString = simplifiedGroup.exportSVG({ asString: true });
-
-//           // turn that string into a DOM element
-//           const parser = new DOMParser();
-//           const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-//           const paths = svgDoc.getElementsByTagName("path");
-
-//           // Resolve the promise with the simplified SVG path data
-//           resolve(paths);
-//         } else {
-//           reject("Failed to load SVG");
-//         }
-//       });
-//     } else {
-//       reject("Paper.js project is not initialized");
-//     }
-//   });
-// }
-
 function mousePressed() {
   createSVG(exampleSVG.svg, true);
+  // let block = new Block(
+  //   world,
+  //   {
+  //     x: mouseX,
+  //     y: mouseY,
+  //     w: 50,
+  //     h: 50,
+  //     stroke: "black",
+  //     strokeWidth: 2,
+  //   },
+  //   { mass: 100 }
+  // );
+  // drawBodies.push(block);
 }
 
 // Change the current level on key press
@@ -702,9 +672,20 @@ function createLevel(levelIndex, clear) {
   }
 }
 
+// Check velocity of the svg body right before the collision with button
+Matter.Events.on(engine, "beforeUpdate", function () {
+  if (currentLevel === "tutorial") {
+    Matter.Composite.allBodies(world).forEach((body) => {
+      if (body.label === "drawnBody") {
+        lastVelocity = body.velocity; // Store the current velocity
+      }
+    });
+  }
+});
+
 // check for win/lose conditions by detecting collisions
 Events.on(engine, "collisionStart", function (event) {
-  if (gameState === "runGame" && drawnSVG) {
+  if (gameState === "runGame" && matterSVG) {
     const pairs = event.pairs;
     // check win/lose conditions for bridge level
     if (currentLevel === "bridge") {
@@ -721,12 +702,12 @@ Events.on(engine, "collisionStart", function (event) {
       });
 
       // check if the drawn object spans across the gap
-      if (Query.collides(drawnSVG.body, winSensors).length == 2) {
+      if (Query.collides(matterSVG.body, winSensors).length == 2) {
         gameState = "win";
       }
 
       // check if the drawn object is too small for the gap
-      if (Query.collides(drawnSVG.body, failSensors).length > 0) {
+      if (Query.collides(matterSVG.body, failSensors).length > 0) {
         gameState = "failure";
       }
     } else if (currentLevel === "balls") {
@@ -780,7 +761,7 @@ Events.on(engine, "collisionStart", function (event) {
         // Check if the colliding body has the required mass and velocity
         if (buttonBody && collidingBody) {
           const collidingMass = collidingBody.mass;
-          const collidingVelocity = Matter.Vector.magnitude(collidingBody.velocity);
+          const collidingVelocity = Matter.Vector.magnitude(lastVelocity);
 
           if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
             // Press the button down
@@ -887,7 +868,7 @@ function createSVG(svg, debug) {
       svgShapes = [];
 
       // create svg body from path data
-      drawnSVG = new PolygonFromSVG(
+      matterSVG = new PolygonFromSVG(
         world,
         {
           x: pos.x,
@@ -901,12 +882,11 @@ function createSVG(svg, debug) {
       );
 
       // remove svg body if it collides with other geometry on spawn
-      if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
+      if (Query.collides(matterSVG.body, levelBodies).length > 0) {
         console.log("collision of svg body with level geometry");
-        drawnSVG.removeBody(world, drawnSVG);
+        matterSVG.removeBody(world, matterSVG);
       } else {
-        svgShapes.push(drawnSVG);
-        console.log(drawnSVG);
+        svgShapes.push(matterSVG);
       }
     }
   });
