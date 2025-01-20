@@ -23,6 +23,7 @@ let drawBodies = [];
 let svgShapes = [];
 let matterSVG;
 let characterBody;
+let snakeSensor;
 let leftBall;
 let rightBall;
 let leftRotating = true;
@@ -49,10 +50,15 @@ let noteAnim;
 let thinkAnim;
 let waitAnim;
 let winAnim;
+let font;
+
+//Snake Anim
+let snakeIdleAni;
+let snakeDeathAni;
 
 //Framerate
 let fps = 9;
-let currentFrame = 0;
+
 let endFrame;
 
 //Hintergründe
@@ -70,6 +76,8 @@ let angrySound;
 let gameState = "runGame";
 let currentLevel = "tutorial";
 
+let startGame = false;
+
 //make sure function for default animation sequence is called once
 let defaultLock = false;
 
@@ -77,8 +85,11 @@ let lastVelocity = { x: 0, y: 0 }; // Variable to store the last velocity
 
 //Stickman
 let stevie;
+let snake;
 
 function preload() {
+  font = loadFont("./Assets/lazy_dog.ttf");
+
   //load each background image and store it in a variable
   bg.tutorial = loadImage("./Assets/BG_01.png");
   bg.bridge = loadImage("./Assets/BG_02.png");
@@ -91,13 +102,25 @@ function preload() {
   idleAnim = loadAni("./Assets/Sprite_Idle.png", { width: 175, height: 248, frames: 18 });
   loseAnim = loadAni("./Assets/Sprite_Lose.png", { width: 175, height: 248, frames: 17 });
   noteAnim = loadAni("./Assets/Sprite_Note.png", { width: 175, height: 248, frames: 14 });
-  thinkAnim = loadAni("./Assets/Sprite_Think.png", { width: 175, height: 248, frames: 11 });
-  waitAnim = loadAni("./Assets/Sprite_Wait.png", { width: 175, height: 248, frames: 10 });
+  thinkAnim = loadAni("./Assets/Sprite_Think_v2.png", { width: 175, height: 248, frames: 17 });
+  waitAnim = loadAni("./Assets/Sprite_Wait_v2.png", { width: 175, height: 248, frames: 15 });
   winAnim = loadAni("./Assets/Sprite_Win.png", { width: 175, height: 248, frames: 13 });
+
+  //load snake States
+  snakeIdleAni = loadAni("./Assets/SnakeIdle.png", { width: 350, height: 496, frames: 13 });
+  snakeDeathAni = loadAni("./Assets/SnakeDeath.png", { width: 350, height: 496, frames: 10 });
 
   //Create Character Sprite with animation size
   stevie = new Sprite(175, 248);
-  //snake = new Sprite(350,496);
+  snake = new Sprite(350, 496);
+
+  //Add every Snake Animation to Snake Sprite
+  snake.addAni("deathSnake", snakeDeathAni);
+  snake.addAni("idleSnake", snakeIdleAni);
+  snake.anis.frameDelay = fps;
+  //make sure snake Sprite is only visible in level 3
+  snake.visible = false;
+  snake.scale = 0.75;
 
   //Add every Animation to the Stevie Sprite
   stevie.addAni("angry", angryAnim, 11);
@@ -144,9 +167,10 @@ function draw() {
   // draw the right assets for each level
   if (currentLevel === "tutorial") {
     image(bg.tutorial, 0, 0, width, height);
+    snake.visible = false;
 
-
-    if (gameState === "runGame") {
+    //added level change else gate is drawn when gameState changes back to runGame
+    if (gameState === "runGame" || gameState === "levelChange") {
       animation(gateHold, width / 2 + width / 4, height / 2 - height / 9);
     }
     if (gameState === "win") {
@@ -154,10 +178,16 @@ function draw() {
       gateAnim.noLoop();
     }
   } else if (currentLevel === "bridge") {
+    snake.visible = false;
     image(bg.bridge, 0, 0, width, height);
   } else if (currentLevel === "snake") {
     image(bg.snake, 0, 0, width, height);
+    if (snakeSensor) {
+      snake.x = snakeSensor.body.position.x;
+      snake.y = snakeSensor.body.position.y + 30;
+    }
   } else if (currentLevel === "balls") {
+    snake.visible = false;
     image(bg.balls, 0, 0, width, height);
     image(ladder, width / 2 - 50, -50);
   }
@@ -183,7 +213,21 @@ function draw() {
   // Play animations according to gameState
   switch (gameState) {
     case "runGame":
-      currentFrame = 0;
+      if (startGame && currentLevel === "tutorial") {
+        //Infotext to signal when player can start safely
+        textFont(font);
+        textSize(36);
+        textAlign(CENTER);
+        noStroke();
+        fill(0);
+        text("place post-it & draw =>", width / 4, height / 4);
+      }
+
+      if (currentLevel === "snake") {
+        snake.visible = true;
+        snake.changeAni("idleSnake");
+        snake.ani.loop();
+      }
 
       if (!defaultLock) {
         defaultSequence();
@@ -192,36 +236,34 @@ function draw() {
       break;
 
     case "failure":
-      defaultLock = false;
+      startGame = false;
       failSequence();
       break;
 
     case "win":
-      defaultLock = false;
+      startGame = false;
       winSequence();
+
       break;
   }
-
-  // Draw black frame around canvas for opencv detection
-  strokeWeight(10);
-  stroke(0);
-  noFill();
-  rect(5, 5, width - 10, height - 10);
 }
 
-//Different animation sequences for the game - hier audio play implementieren (falls möglich)
+//Different animation sequences for the game
 async function defaultSequence() {
-  //Für Soundeffekte aufteilen - aber bis jetzt nicht möglich einzubauen
-  //Beginnt mit der Überrascht Animation
-  //await stevie.changeAni("idle");
-
   await stevie.changeAni("note");
-  await stevie.changeAni(["think", "idle", "think", "idle", "wait", "idle", "**"]);
+  startGame = true;
+  await stevie.changeAni(["idle", "think", "idle", "think", "idle", "wait", "**"]);
 }
 
 function winSequence() {
-  // For sound effects
+  defaultLock = false;
+
   stevie.changeAni("win");
+
+  if (currentLevel === "snake") {
+    snake.changeAni("deathSnake");
+    snake.ani.noLoop();
+  }
 
   textAlign(CENTER);
   textSize(250);
@@ -231,8 +273,7 @@ function winSequence() {
 
   if (stevie.ani.frame - stevie.ani.lastFrame == 0) {
     stevie.ani.frame = 0;
-    gateAnim.frame = 0;
-    gateAnim.loop();
+
     gameState = "runGame";
 
     switchLevel(currentLevel); // Pass the current level to switchLevel
@@ -240,6 +281,7 @@ function winSequence() {
 }
 
 function failSequence() {
+  defaultLock = false;
   stevie.changeAni("lose");
 
   textAlign(CENTER);
@@ -365,13 +407,18 @@ function createLevel(levelIndex, clear) {
       top: { w: width / 10, h: height / 14 },
     },
     bridge: {
-      leftCliff: { w: width / 2, h: height / 1 / 5 },
-      rightCliff: { w: width / 2.5, h: height / 1 / 5 },
+      leftCliff: { w: width / 3.5, h: height / 1 / 5 },
+      rightCliff: { w: width / 1.65, h: height / 1 / 5 },
       sensor: { w: 100, h: 50 },
     },
     snake: {
       floor: { w: width, h: height / 1 / 5 },
-      snake: { x: width - width / 3, y: height - height / 1 / 5, w: 350, h: 496 },
+      snake: {
+        x: width - width / 3,
+        y: height - height / 1 / 5,
+        w: snakeIdleAni.width,
+        h: snakeIdleAni.height,
+      },
     },
     balls: {
       leftWall: { w: width / 2.9, h: height / 1.8 },
@@ -419,7 +466,7 @@ function createLevel(levelIndex, clear) {
       // bridge level
       terrain: {
         leftCliff: {
-          x: dim.bridge.leftCliff.w / 2,
+          x: dim.bridge.leftCliff.w - dim.bridge.leftCliff.w / 2,
           y: height - dim.bridge.leftCliff.h / 2,
           w: dim.bridge.leftCliff.w,
           h: dim.bridge.leftCliff.h,
@@ -474,10 +521,9 @@ function createLevel(levelIndex, clear) {
       sensors: {
         snake: {
           x: dim.snake.snake.x,
-          y: dim.snake.snake.y - dim.snake.snake.h,
-          // ADD: Dynamically link asset size
-          w: dim.snake.snake.w,
-          h: dim.snake.snake.h,
+          y: dim.snake.snake.y - snakeIdleAni.height + 140,
+          w: snakeIdleAni.width - 100,
+          h: snakeIdleAni.height - 170,
           label: "snake",
         },
       },
@@ -561,14 +607,24 @@ function createLevel(levelIndex, clear) {
   // Create sensors (e.g., for collision detection)
   if (level.sensors) {
     Object.values(level.sensors).forEach((sensor) => {
-      let levelSensor;
-      levelSensor = new Block(
-        world,
-        { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" },
-        { isStatic: true, isSensor: true, label: sensor.label },
-        "CORNER"
-      );
-      drawBodies.push(levelSensor);
+      if (sensor.label === "snake") {
+        snakeSensor = new Block(
+          world,
+          { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" },
+          { isStatic: true, isSensor: true, label: sensor.label },
+          "CORNER"
+        );
+        // drawBodies.push(snakeSensor);
+      } else {
+        let levelSensor;
+        levelSensor = new Block(
+          world,
+          { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" },
+          { isStatic: true, isSensor: true, label: sensor.label },
+          "CORNER"
+        );
+        // drawBodies.push(levelSensor);
+      }
     });
   }
 
@@ -655,8 +711,7 @@ function createLevel(levelIndex, clear) {
 }
 
 // Check velocity of the svg body right before the collision with button
-Matter.Events.on(engine, 
-  "beforeUpdate", function () {
+Matter.Events.on(engine, "beforeUpdate", function () {
   if (currentLevel === "tutorial") {
     Matter.Composite.allBodies(world).forEach((body) => {
       if (body.label === "drawnBody") {
@@ -696,22 +751,22 @@ Events.on(engine, "collisionStart", function (event) {
     } else if (currentLevel === "balls") {
       // ball level
       let query = [];
-      let testBlock;
+      let svg;
       const bodies = Composite.allBodies(world);
       bodies.forEach((body) => {
         if (body.label.includes("Ball")) {
           query.push(body);
         } else if (body.label === "terrain") {
           query.push(body);
-        } else if (body.label === "test") {
-          testBlock = body;
+        } else if (body.label === "drawnBody") {
+          svg = body;
         }
       });
 
-      if (testBlock) {
-        let collisionRecord = Query.collides(testBlock, query);
+      if (svg) {
+        let collisionRecord = Query.collides(svg, query);
         if (collisionRecord.length >= 2) {
-          let depth = Query.collides(testBlock, query)[0].depth;
+          let depth = Query.collides(svg, query)[0].depth;
           if (Math.abs(depth) > 10) {
             console.log(collisionRecord[1].bodyA.label);
             console.log(collisionRecord[1].bodyB.label);
@@ -755,7 +810,7 @@ Events.on(engine, "collisionStart", function (event) {
       });
     } else if (currentLevel === "snake") {
       // tutorial and puzzle button level
-      const massThreshold = 10;
+      const massThreshold = 5;
 
       pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
@@ -770,6 +825,7 @@ Events.on(engine, "collisionStart", function (event) {
 
           if (collidingMass >= massThreshold) {
             // Squash the snake and win level
+            gameState = "win";
           }
         }
       });
@@ -862,7 +918,7 @@ function createSVG(svg, debug) {
           stroke: "black",
           weight: 2,
         },
-        { isStatic: false, label: "drawnBody", friction: 0.5, restitution: 0.6 }
+        { isStatic: false, mass: 100, label: "drawnBody", friction: 0.5, restitution: 0.6 }
       );
 
       // remove svg body if it collides with other geometry on spawn
