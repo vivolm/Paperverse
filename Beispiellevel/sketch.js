@@ -52,6 +52,10 @@ let thinkAnim;
 let waitAnim;
 let winAnim;
 
+//Snake Anim
+let snakeIdleAni;
+let snakeDeathAni;
+
 //Framerate
 let fps = 9;
 let currentFrame = 0;
@@ -63,19 +67,19 @@ let hgTwo;
 let hgThree;
 let hgFour;
 
-//Sound
-let angrySound;
-
 // global game logic
 let gameState = "runGame";
 let currentLevel = "tutorial";
 let levelCount = 4;
+
+let startGame = false;
 
 //make sure function for default animation sequence is called once
 let defaultLock = false;
 
 //Stickman
 let stevie;
+let snake;
 
 function preload() {
   //load each background image and store it in a variable
@@ -89,13 +93,24 @@ function preload() {
   idleAnim = loadAni("./Assets/Sprite_Idle.png", { width: 175, height: 248, frames: 18 });
   loseAnim = loadAni("./Assets/Sprite_Lose.png", { width: 175, height: 248, frames: 17 });
   noteAnim = loadAni("./Assets/Sprite_Note.png", { width: 175, height: 248, frames: 14 });
-  thinkAnim = loadAni("./Assets/Sprite_Think.png", { width: 175, height: 248, frames: 11 });
-  waitAnim = loadAni("./Assets/Sprite_Wait.png", { width: 175, height: 248, frames: 10 });
+  thinkAnim = loadAni("./Assets/Sprite_Think_v2.png", { width: 175, height: 248, frames: 17 });
+  waitAnim = loadAni("./Assets/Sprite_Wait_v2.png", { width: 175, height: 248, frames: 15 });
   winAnim = loadAni("./Assets/Sprite_Win.png", { width: 175, height: 248, frames: 13 });
+
+  //load snake States
+  snakeIdleAni = loadAni("./Assets/SnakeIdle.png", { width: 350, height: 496, frames: 13 });
+  snakeDeathAni = loadAni("./Assets/SnakeDeath.png", { width: 350, height: 496, frames: 10 });
 
   //Create Character Sprite with animation size
   stevie = new Sprite(175, 248);
-  //snake = new Sprite(350,496);
+  snake = new Sprite(350,496);
+
+  //Add every Snake Animation to Snake Sprite
+  snake.addAni("deathSnake", snakeDeathAni);
+  snake.addAni("idleSnake", snakeIdleAni);
+  snake.anis.frameDelay = fps;
+  //make sure snake Sprite is only visible in level 3
+  snake.visible = false;
 
   //Add every Animation to the Stevie Sprite
   stevie.addAni("angry", angryAnim, 11);
@@ -134,14 +149,19 @@ function setup() {
 
 function draw() {
   //Set Sprite Position to Correct Position within frame
+
   if (characterBody) {
     stevie.x = characterBody.body.position.x;
     stevie.y = characterBody.body.position.y;
+    
+    snake.x = width/3 * 2;
+    snake.y = height/2;
   }
 
   //Drawing Background, post it placement and Gate Animation
   if (currentLevel === "tutorial") {
     backgroundSetup(hgOne);
+    snake.visible = false;
 
     push();
     rectMode(CENTER);
@@ -152,7 +172,8 @@ function draw() {
     rect(width / 2, height / 4, 200, 200);
     pop();
 
-    if (gameState === "runGame") {
+    //added level change else gate is drawn when gameState changes back to runGame
+    if (gameState === "runGame" || gameState === "levelChange") {
       animation(gateHold, width / 2 + width / 4, height / 2 - height / 9);
     }
     if (gameState === "win") {
@@ -161,10 +182,13 @@ function draw() {
     }
   } else if (currentLevel === "bridge") {
     backgroundSetup(hgTwo);
+    snake.visible = false;
   } else if (currentLevel === "snake") {
     backgroundSetup(hgThree);
+    snake.visible = true;
   } else if (currentLevel === "balls") {
     backgroundSetup(hgFour);
+    snake.visible = false;
   }
 
   if (leftBall && rightBall) {
@@ -188,21 +212,50 @@ function draw() {
     //set current frame to zero to replay win and lose anims
     currentFrame = 0;
 
+
+    if(startGame){
+      //Infotext to signal when player can start safely
+      textSize(18);
+      textAlign(CENTER);
+      textStyle(BOLDITALIC);
+      noStroke();
+      fill(0);
+      text("Place Post-It & draw!", width/2, height/3);
+    }
+
+    if(currentLevel === "snake"){
+      snake.changeAni("idleSnake");
+      snake.ani.loop();
+    }
+
     if (!defaultLock) {
       defaultSequence();
       defaultLock = true;
     }
   }
 
+  if(gameState === "levelChange"){
+    levelChange();
+    defaultLock = false;
+  }
+
   //Diese hier extra, da sie außerhalb des normalen Gameablaufes laufen
   if (gameState === "failure") {
     defaultLock = false;
+    startGame = false;
     failSequence();
   }
 
   if (gameState === "win") {
     defaultLock = false;
+    startGame = false;
     winSequence();
+
+    if(currentLevel === "snake"){
+      //make sure ani stops at right time
+      snake.changeAni("deathSnake");
+      snake.ani.noLoop();
+    }
   }
 
   //Schwarzer Rahmen um Spielfeld
@@ -216,10 +269,28 @@ function draw() {
 async function defaultSequence() {
   //Für Soundeffekte aufteilen - aber bis jetzt nicht möglich einzubauen
   //Beginnt mit der Überrascht Animation
-  //await stevie.changeAni("idle");
-
   await stevie.changeAni("note");
-  await stevie.changeAni(["think", "idle", "think", "idle", "wait", "idle", "**"]);
+  startGame = true;
+  await stevie.changeAni(["idle", "think", "idle", "think", "idle", "wait", "**"]);
+}
+
+function levelChange(){
+  stevie.changeAni("note");
+  console.log("levelChange is active");
+
+  if (stevie.ani.frame - stevie.ani.lastFrame == 0) {
+    stevie.ani.frame = 0;
+    //reset Gate Ani to restart
+    gateAnim.frame = 0;
+    gateAnim.loop();
+    //reset Snake Animation to restart
+    snake.ani.frame = 0;
+    snake.ani.loop();
+
+    gameState = "runGame";
+
+    // levelChange();
+  }
 }
 
 function winSequence() {
@@ -235,8 +306,13 @@ function winSequence() {
 
   if (stevie.ani.frame - stevie.ani.lastFrame == 0) {
     stevie.ani.frame = 0;
+    //reset Gate Ani to restart
     gateAnim.frame = 0;
     gateAnim.loop();
+    //reset Snake Animation to restart
+    snake.ani.frame = 0;
+    snake.ani.loop();
+
     gameState = "runGame";
 
     // levelChange();
@@ -341,6 +417,7 @@ function mousePressed() {
 
 // Change the current level on key press
 function keyPressed() {
+  gameState = "levelChange";
   // Create a mapping of level keys to level names
   const levelMapping = {
     1: "tutorial",
@@ -805,6 +882,7 @@ Events.on(engine, "collisionStart", function (event) {
 
           if (collidingMass >= massThreshold) {
             // Squash the snake and win level
+            gameState = "win";
           }
         }
       });
