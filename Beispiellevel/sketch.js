@@ -189,7 +189,9 @@ function draw() {
   } else if (currentLevel === "balls") {
     snake.visible = false;
     image(bg.balls, 0, 0, width, height);
+    tint(255, 90);
     image(ladder, width / 2 - 50, -50);
+    noTint();
   }
 
   if (leftBall && rightBall) {
@@ -546,7 +548,7 @@ function createLevel(levelIndex, clear) {
         },
         rightWall: {
           x: width - dim.balls.rightWall.w / 2,
-          y: (height - dim.balls.floor.h) / 2,
+          y: (height - dim.balls.floor.h) / 2 + height / 2.5,
           w: dim.balls.rightWall.w,
           h: height - dim.balls.floor.h,
         },

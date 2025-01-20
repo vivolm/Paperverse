@@ -121,7 +121,7 @@ def enhance_contrast(image):
     l, a, b = cv2.split(lab)
     
     # Apply CLAHE to the L (lightness) channel
-    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(8, 8))
+    clahe = cv2.createCLAHE(clipLimit=1.8, tileGridSize=(8, 8))
     l = clahe.apply(l)
     
     # Merge the enhanced L channel back with A and B channels
