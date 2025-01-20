@@ -139,7 +139,7 @@ async function simplifyImage(inputImage, outputImage) {
 async function preprocessImage(inputImage, outputImage) {
   console.log("Preprocessing the image...");
 
-  await sharp(inputImage).greyscale().toFile(outputImage);
+  await sharp(inputImage).greyscale().modulate({ brightness: 1.3 }).toFile(outputImage);
 
   console.log(`Image preprocessing complete. Saved to ${outputImage}`);
 }

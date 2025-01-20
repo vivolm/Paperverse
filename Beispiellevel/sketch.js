@@ -147,7 +147,8 @@ function setup() {
   const canvas = createCanvas(windowWidth, windowHeight + 10);
   outro = createVideo("./Assets/PaperverseOutro.mp4");
   outro.parent("sketchHolder");
-  // outro.hide();
+  outro.stop();
+  outro.hide();
   canvas.parent("sketchHolder");
 
   outro.size(width, height);
@@ -210,7 +211,7 @@ function draw() {
       Body.rotate(rightBall.body, radians(0.5));
     }
   } else {
-    // image(outro, width / 2, height / 2, width, height);
+    outro.play();
   }
 
   // draw all bodies
@@ -348,7 +349,7 @@ function switchLevel(input) {
     createLevel(nextLevelName, true); // Pass the next level name
     currentLevel = nextLevelName; // Update the current level
   } else {
-    outro.play();
+    console.log("no more levels to switch to")
   }
 }
 
