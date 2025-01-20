@@ -110,6 +110,28 @@ def detect_postit_and_draw(frame, projection_area=None):
                     return warped, detected_color
     return None, None
 
+def enhance_contrast(image):
+    """
+    Enhance the contrast of the input image using CLAHE.
+    """
+    # Convert the image to LAB color space
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    
+    # Split the LAB image into L, A, and B channels
+    l, a, b = cv2.split(lab)
+    
+    # Apply CLAHE to the L (lightness) channel
+    clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8, 8))
+    l = clahe.apply(l)
+    
+    # Merge the enhanced L channel back with A and B channels
+    enhanced_lab = cv2.merge((l, a, b))
+    
+    # Convert the LAB image back to BGR color space
+    enhanced_image = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
+    
+    return enhanced_image
+
 def get_relative_position(postit_rect, projection_rect):
     width, height = 1.0, 1.0
     M = cv2.getPerspectiveTransform(projection_rect, np.array([
@@ -179,7 +201,7 @@ def detect_drawing(prev_frame, current_frame):
 
 
 def main():
-    cap = cv2.VideoCapture(2)
+    cap = cv2.VideoCapture(3)
     prev_frame = None
     drawing_detected = False
     no_movement_counter = 0
@@ -204,7 +226,9 @@ def main():
             break
 
         frame = cv2.resize(frame, (640, 480))
-
+        
+        # Enhance contrast using CLAHE
+        frame = enhance_contrast(frame)
          # Detect the projection area
         projection_area = detect_projection_area(frame)
 
