@@ -22,14 +22,13 @@ const socket = new WebSocket("ws://localhost:8080");
 let drawBodies = [];
 let svgShapes = [];
 let matterSVG;
-let backgroundImgs = [];
 let characterBody;
 let leftBall;
 let rightBall;
 let leftRotating = true;
 let rightRotating = true;
 let exampleSVG = {
-  svg: '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" version="1.1">\n\t<path d="M 102.814 69.078 C 86.592 71.458, 81.106 74.105, 70.316 84.761 C 64.992 90.019, 62.310 94.894, 59.180 105 C 54.772 119.235, 53.730 126.031, 54.919 132.778 C 55.474 135.925, 56.183 140.548, 56.496 143.052 C 57.629 152.142, 67.764 168.535, 79.708 180.595 C 84.970 185.909, 99.013 188.493, 108.500 185.893 C 112.628 184.761, 126.614 175.865, 128.650 173.076 C 129.282 172.209, 131.679 169.475, 133.976 167.001 C 138.531 162.094, 145.833 150.556, 147.900 145 C 148.616 143.075, 149.719 140.419, 150.351 139.097 C 152.235 135.157, 151.845 109.280, 149.837 105 C 145.853 96.505, 143 90.085, 143 89.612 C 143 89.331, 141.688 87.156, 140.085 84.780 C 136.557 79.553, 130.412 74.999, 121.482 70.992 C 114.577 67.894, 112.405 67.671, 102.814 69.078 M 97.641 78.059 C 92.877 78.613, 90.109 79.489, 88.577 80.928 C 87.364 82.068, 86.063 83, 85.686 83 C 85.308 83, 84.208 83.787, 83.239 84.750 C 82.271 85.713, 80.359 87.400, 78.989 88.500 C 73.130 93.207, 68 102.809, 68 109.067 C 68 110.615, 67.626 112.113, 67.169 112.395 C 64.071 114.310, 63.394 134.720, 66.084 145.155 C 66.993 148.682, 70.656 157, 73.434 161.844 C 75.654 165.716, 82.210 171.992, 87 174.832 C 90.687 177.018, 92.674 177.488, 98, 177.433 C 106.312 177.347, 110.076 175.522, 118.427 167.533 C 122.065 164.053, 126.572 160.039, 128.442 158.612 C 135.149 153.496, 143.006 135.387, 142.992 125.076 C 142.972 110.344, 137.374 93.096, 130.415, 86.326 C 126.462 82.482, 124.552 81.341, 116.703 78.141 C 113.610 76.879, 108.008 76.855, 97.641 78.059" stroke="none" fill="black" fill-rule="evenodd"/>/n</svg>',
+  svg: '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" version="1.1">/n/t<path d="M 102.814 69.078 C 86.592 71.458, 81.106 74.105, 70.316 84.761 C 64.992 90.019, 62.310 94.894, 59.180 105 C 54.772 119.235, 53.730 126.031, 54.919 132.778 C 55.474 135.925, 56.183 140.548, 56.496 143.052 C 57.629 152.142, 67.764 168.535, 79.708 180.595 C 84.970 185.909, 99.013 188.493, 108.500 185.893 C 112.628 184.761, 126.614 175.865, 128.650 173.076 C 129.282 172.209, 131.679 169.475, 133.976 167.001 C 138.531 162.094, 145.833 150.556, 147.900 145 C 148.616 143.075, 149.719 140.419, 150.351 139.097 C 152.235 135.157, 151.845 109.280, 149.837 105 C 145.853 96.505, 143 90.085, 143 89.612 C 143 89.331, 141.688 87.156, 140.085 84.780 C 136.557 79.553, 130.412 74.999, 121.482 70.992 C 114.577 67.894, 112.405 67.671, 102.814 69.078 M 97.641 78.059 C 92.877 78.613, 90.109 79.489, 88.577 80.928 C 87.364 82.068, 86.063 83, 85.686 83 C 85.308 83, 84.208 83.787, 83.239 84.750 C 82.271 85.713, 80.359 87.400, 78.989 88.500 C 73.130 93.207, 68 102.809, 68 109.067 C 68 110.615, 67.626 112.113, 67.169 112.395 C 64.071 114.310, 63.394 134.720, 66.084 145.155 C 66.993 148.682, 70.656 157, 73.434 161.844 C 75.654 165.716, 82.210 171.992, 87 174.832 C 90.687 177.018, 92.674 177.488, 98, 177.433 C 106.312 177.347, 110.076 175.522, 118.427 167.533 C 122.065 164.053, 126.572 160.039, 128.442 158.612 C 135.149 153.496, 143.006 135.387, 142.992 125.076 C 142.972 110.344, 137.374 93.096, 130.415, 86.326 C 126.462 82.482, 124.552 81.341, 116.703 78.141 C 113.610 76.879, 108.008 76.855, 97.641 78.059" stroke="none" fill="black" fill-rule="evenodd"/>/n</svg>',
 };
 
 // global variable for data tracking
@@ -57,10 +56,18 @@ let currentFrame = 0;
 let endFrame;
 
 //Hintergründe
+let bg = {
+  tutorial: null,
+  bridge: null,
+  snake: null,
+  balls: null,
+};
+
 let hgOne;
 let hgTwo;
 let hgThree;
 let hgFour;
+let ladder;
 
 //Sound
 let angrySound;
@@ -79,10 +86,11 @@ let stevie;
 
 function preload() {
   //load each background image and store it in a variable
-  hgOne = loadImage("./Assets/BG_01.png");
-  hgTwo = loadImage("./Assets/BG_02.png");
-  hgThree = loadImage("./Assets/BG_03.png");
-  hgFour = loadImage("./Assets/BG_04.png");
+  bg.tutorial = loadImage("./Assets/BG_01.png");
+  bg.bridge = loadImage("./Assets/BG_02.png");
+  bg.snake = loadImage("./Assets/BG_03.png");
+  bg.balls = loadImage("./Assets/BG_04.png");
+  ladder = loadImage("./Assets/Leiter.png");
 
   // load each animation and set frameDelay to 9 with fps variale
   angryAnim = loadAni("./Assets/Sprite_Angry.png", { width: 175, height: 248, frames: 11 });
@@ -141,7 +149,7 @@ function draw() {
 
   //Drawing Background, post it placement and Gate Animation
   if (currentLevel === "tutorial") {
-    backgroundSetup(hgOne);
+    image(bg.tutorial, 0, 0, width, height);
 
     push();
     rectMode(CENTER);
@@ -160,11 +168,12 @@ function draw() {
       gateAnim.noLoop();
     }
   } else if (currentLevel === "bridge") {
-    backgroundSetup(hgTwo);
+    image(bg.bridge, 0, 0, width, height);
   } else if (currentLevel === "snake") {
-    backgroundSetup(hgThree);
+    image(bg.snake, 0, 0, width, height);
   } else if (currentLevel === "balls") {
-    backgroundSetup(hgFour);
+    image(bg.balls, 0, 0, width, height);
+    image(ladder, width / 2 - 50, -50);
   }
 
   if (leftBall && rightBall) {
@@ -182,7 +191,6 @@ function draw() {
   // draw the handdrawn svg shape
   svgShapes.forEach((x) => {
     x.draw();
-    console.log(x.body.velocity.y);
   });
 
   if (gameState == "runGame") {
@@ -293,20 +301,20 @@ function backgroundSetup(imageTitle) {
 // }
 
 function mousePressed() {
-  createSVG(exampleSVG.svg, true);
-  // let block = new Block(
-  //   world,
-  //   {
-  //     x: mouseX,
-  //     y: mouseY,
-  //     w: 50,
-  //     h: 50,
-  //     stroke: "black",
-  //     strokeWidth: 2,
-  //   },
-  //   { mass: 100 }
-  // );
-  // drawBodies.push(block);
+  // createSVG(exampleSVG.svg, true);
+  let block = new Block(
+    world,
+    {
+      x: mouseX,
+      y: mouseY,
+      w: 50,
+      h: 50,
+      stroke: "black",
+      strokeWidth: 2,
+    },
+    { mass: 100 }
+  );
+  drawBodies.push(block);
 }
 
 // Change the current level on key press
@@ -373,7 +381,7 @@ function createLevel(levelIndex, clear) {
   }
   // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data
   let dim = {
-    char: { x: 0 + width / 4, y: height - height / 1 / 5 },
+    char: { x: 0 + width / 6, y: height - height / 1 / 5 },
     tutorial: {
       floor: { w: width, h: height / 1 / 5 },
       base: { w: width / 6, h: height / 12 },
@@ -389,17 +397,16 @@ function createLevel(levelIndex, clear) {
       snake: { x: width - width / 3, y: height - height / 1 / 5, w: 350, h: 496 },
     },
     balls: {
-      leftWall: { w: width / 3.5, h: height / 2 },
+      leftWall: { w: width / 2.9, h: height / 1.7 },
       rightWall: { w: width / 3.5 },
-      floor: { w: width, h: height / 1 / 5 },
-      radius: width / 12,
+      floor: { w: width, h: height / 1 / 12 },
+      radius: width / 14,
     },
   };
 
   let levels = {
     tutorial: {
       // tutorial level
-      background: backgroundImgs[0],
       terrain: {
         floor: {
           x: dim.tutorial.floor.w / 2,
@@ -433,7 +440,6 @@ function createLevel(levelIndex, clear) {
     },
     bridge: {
       // bridge level
-      background: backgroundImgs[0],
       terrain: {
         leftCliff: {
           x: dim.bridge.leftCliff.w / 2,
@@ -480,7 +486,6 @@ function createLevel(levelIndex, clear) {
     },
     snake: {
       // snake level
-      background: backgroundImgs[0],
       terrain: {
         floor: {
           x: dim.snake.floor.w / 2,
@@ -508,7 +513,7 @@ function createLevel(levelIndex, clear) {
     },
     balls: {
       // balls level
-      background: backgroundImgs[0],
+
       terrain: {
         leftWall: {
           x: dim.balls.leftWall.w / 2,
@@ -532,7 +537,7 @@ function createLevel(levelIndex, clear) {
       spikeBall: {
         left: {
           x: dim.balls.leftWall.w + dim.balls.radius,
-          y: 0 + dim.balls.leftWall.h / 1.5,
+          y: 0 + dim.balls.leftWall.h / 1.2,
           r: dim.balls.radius,
           label: "leftBall",
         },
@@ -747,7 +752,7 @@ Events.on(engine, "collisionStart", function (event) {
       }
     } else if (currentLevel === "tutorial") {
       // tutorial and puzzle button level
-      const massThreshold = 10;
+      const massThreshold = 8;
       const velocityThreshold = 10;
 
       pairs.forEach((pair) => {
@@ -762,6 +767,7 @@ Events.on(engine, "collisionStart", function (event) {
         if (buttonBody && collidingBody) {
           const collidingMass = collidingBody.mass;
           const collidingVelocity = Matter.Vector.magnitude(lastVelocity);
+          console.log(collidingMass);
 
           if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
             // Press the button down
@@ -878,7 +884,7 @@ function createSVG(svg, debug) {
           stroke: "black",
           weight: 2,
         },
-        { isStatic: false, mass: 100, label: "drawnBody" }
+        { isStatic: false, label: "drawnBody", friction: 0.5, restitution: 0.6 }
       );
 
       // remove svg body if it collides with other geometry on spawn
