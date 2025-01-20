@@ -423,7 +423,7 @@ function createLevel(levelIndex, clear) {
       },
     },
     balls: {
-      leftWall: { w: width / 2.9, h: height / 1.8 },
+      leftWall: { w: width / 2.9, h: height / 3 },
       rightWall: { w: width / 3.5 },
       floor: { w: width, h: height / 1 / 12 },
       radius: width / 14,
@@ -542,7 +542,7 @@ function createLevel(levelIndex, clear) {
       terrain: {
         leftWall: {
           x: dim.balls.leftWall.w / 2,
-          y: 0 + dim.balls.leftWall.h / 2,
+          y: height / 4 + dim.balls.leftWall.h / 2,
           w: dim.balls.leftWall.w,
           h: dim.balls.leftWall.h,
         },
@@ -562,7 +562,7 @@ function createLevel(levelIndex, clear) {
       spikeBall: {
         left: {
           x: dim.balls.leftWall.w + dim.balls.radius,
-          y: 0 + dim.balls.leftWall.h / 1.2,
+          y: height / 4 + dim.balls.leftWall.h / 1.5,
           r: dim.balls.radius,
           label: "leftBall",
         },
