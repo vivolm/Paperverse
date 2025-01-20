@@ -209,6 +209,7 @@ function draw() {
       Body.rotate(rightBall.body, radians(0.5));
     }
     if (!leftRotating && !rightRotating) {
+      outro.show();4
       outro.loop();
       outro.play();
     }
