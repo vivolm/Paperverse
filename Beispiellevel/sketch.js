@@ -147,12 +147,10 @@ function setup() {
   const canvas = createCanvas(windowWidth, windowHeight + 10);
   outro = createVideo("./Assets/PaperverseOutro.mp4");
   outro.parent("sketchHolder");
+  outro.size(width, height);
   outro.stop();
   outro.hide();
   canvas.parent("sketchHolder");
-
-  outro.size(width, height);
-  outro.loop();
 
   // set paper.js working space to p5.js canvas
   canvas.id("myCanvas");
@@ -210,10 +208,11 @@ function draw() {
     if (rightRotating) {
       Body.rotate(rightBall.body, radians(0.5));
     }
-  } else {
-    outro.play();
+    if (!leftRotating && !rightRotating) {
+      outro.loop();
+      outro.play();
+    }
   }
-
   // draw all bodies
   drawBodies.forEach((x) => {
     x.draw();
