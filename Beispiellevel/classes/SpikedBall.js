@@ -35,16 +35,10 @@ class SpikedBall extends Ball {
 
     for (let i = 0; i < spikeCount; i++) {
       const angle = spikeAngle * i;
-      const baseX =
-        this.circleBody.position.x + this.attributes.r * Math.cos(angle);
-      const baseY =
-        this.circleBody.position.y + this.attributes.r * Math.sin(angle);
-      const tipX =
-        this.circleBody.position.x +
-        (this.attributes.r + spikeLength) * Math.cos(angle);
-      const tipY =
-        this.circleBody.position.y +
-        (this.attributes.r + spikeLength) * Math.sin(angle);
+      const baseX = this.circleBody.position.x + this.attributes.r * Math.cos(angle);
+      const baseY = this.circleBody.position.y + this.attributes.r * Math.sin(angle);
+      const tipX = this.circleBody.position.x + (this.attributes.r + spikeLength) * Math.cos(angle);
+      const tipY = this.circleBody.position.y + (this.attributes.r + spikeLength) * Math.sin(angle);
 
       // Create a triangle for the spike
       const spike = Matter.Bodies.fromVertices(
@@ -64,7 +58,7 @@ class SpikedBall extends Ball {
       // Translate the spike to its base position
       Matter.Body.setPosition(spike, { x: baseX, y: baseY });
 
-      if (!(i >= 6 && i <= 8) && !(i >= 0 && i <= 2)) {
+      if (i >= 7 && i <= 10) {
         this.spikes.push(spike); // Add spike to the spikes array
       }
     }

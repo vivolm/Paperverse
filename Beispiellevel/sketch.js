@@ -21,16 +21,14 @@ const socket = new WebSocket("ws://localhost:8080");
 // global variables for tracking bodies & assets
 let drawBodies = [];
 let svgShapes = [];
-let drawableSVG;
-let drawnSVG;
-let backgroundImgs = [];
+let matterSVG;
 let characterBody;
 let leftBall;
 let rightBall;
 let leftRotating = true;
 let rightRotating = true;
 let exampleSVG = {
-  svg: '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" version="1.1">\n\t<path d="M 102.814 69.078 C 86.592 71.458, 81.106 74.105, 70.316 84.761 C 64.992 90.019, 62.310 94.894, 59.180 105 C 54.772 119.235, 53.730 126.031, 54.919 132.778 C 55.474 135.925, 56.183 140.548, 56.496 143.052 C 57.629 152.142, 67.764 168.535, 79.708 180.595 C 84.970 185.909, 99.013 188.493, 108.500 185.893 C 112.628 184.761, 126.614 175.865, 128.650 173.076 C 129.282 172.209, 131.679 169.475, 133.976 167.001 C 138.531 162.094, 145.833 150.556, 147.900 145 C 148.616 143.075, 149.719 140.419, 150.351 139.097 C 152.235 135.157, 151.845 109.280, 149.837 105 C 145.853 96.505, 143 90.085, 143 89.612 C 143 89.331, 141.688 87.156, 140.085 84.780 C 136.557 79.553, 130.412 74.999, 121.482 70.992 C 114.577 67.894, 112.405 67.671, 102.814 69.078 M 97.641 78.059 C 92.877 78.613, 90.109 79.489, 88.577 80.928 C 87.364 82.068, 86.063 83, 85.686 83 C 85.308 83, 84.208 83.787, 83.239 84.750 C 82.271 85.713, 80.359 87.400, 78.989 88.500 C 73.130 93.207, 68 102.809, 68 109.067 C 68 110.615, 67.626 112.113, 67.169 112.395 C 64.071 114.310, 63.394 134.720, 66.084 145.155 C 66.993 148.682, 70.656 157, 73.434 161.844 C 75.654 165.716, 82.210 171.992, 87 174.832 C 90.687 177.018, 92.674 177.488, 98, 177.433 C 106.312 177.347, 110.076 175.522, 118.427 167.533 C 122.065 164.053, 126.572 160.039, 128.442 158.612 C 135.149 153.496, 143.006 135.387, 142.992 125.076 C 142.972 110.344, 137.374 93.096, 130.415, 86.326 C 126.462 82.482, 124.552 81.341, 116.703 78.141 C 113.610 76.879, 108.008 76.855, 97.641 78.059" stroke="none" fill="black" fill-rule="evenodd"/>/n</svg>',
+  svg: '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" version="1.1">/n/t<path d="M 102.814 69.078 C 86.592 71.458, 81.106 74.105, 70.316 84.761 C 64.992 90.019, 62.310 94.894, 59.180 105 C 54.772 119.235, 53.730 126.031, 54.919 132.778 C 55.474 135.925, 56.183 140.548, 56.496 143.052 C 57.629 152.142, 67.764 168.535, 79.708 180.595 C 84.970 185.909, 99.013 188.493, 108.500 185.893 C 112.628 184.761, 126.614 175.865, 128.650 173.076 C 129.282 172.209, 131.679 169.475, 133.976 167.001 C 138.531 162.094, 145.833 150.556, 147.900 145 C 148.616 143.075, 149.719 140.419, 150.351 139.097 C 152.235 135.157, 151.845 109.280, 149.837 105 C 145.853 96.505, 143 90.085, 143 89.612 C 143 89.331, 141.688 87.156, 140.085 84.780 C 136.557 79.553, 130.412 74.999, 121.482 70.992 C 114.577 67.894, 112.405 67.671, 102.814 69.078 M 97.641 78.059 C 92.877 78.613, 90.109 79.489, 88.577 80.928 C 87.364 82.068, 86.063 83, 85.686 83 C 85.308 83, 84.208 83.787, 83.239 84.750 C 82.271 85.713, 80.359 87.400, 78.989 88.500 C 73.130 93.207, 68 102.809, 68 109.067 C 68 110.615, 67.626 112.113, 67.169 112.395 C 64.071 114.310, 63.394 134.720, 66.084 145.155 C 66.993 148.682, 70.656 157, 73.434 161.844 C 75.654 165.716, 82.210 171.992, 87 174.832 C 90.687 177.018, 92.674 177.488, 98, 177.433 C 106.312 177.347, 110.076 175.522, 118.427 167.533 C 122.065 164.053, 126.572 160.039, 128.442 158.612 C 135.149 153.496, 143.006 135.387, 142.992 125.076 C 142.972 110.344, 137.374 93.096, 130.415, 86.326 C 126.462 82.482, 124.552 81.341, 116.703 78.141 C 113.610 76.879, 108.008 76.855, 97.641 78.059" stroke="none" fill="black" fill-rule="evenodd"/>/n</svg>',
 };
 
 // global variable for data tracking
@@ -62,20 +60,26 @@ let currentFrame = 0;
 let endFrame;
 
 //Hintergründe
-let hgOne;
-let hgTwo;
-let hgThree;
-let hgFour;
+let bg = {
+  tutorial: null,
+  bridge: null,
+  snake: null,
+  balls: null,
+};
+
+//Sound
+let angrySound;
 
 // global game logic
 let gameState = "runGame";
 let currentLevel = "tutorial";
-let levelCount = 4;
 
 let startGame = false;
 
 //make sure function for default animation sequence is called once
 let defaultLock = false;
+
+let lastVelocity = { x: 0, y: 0 }; // Variable to store the last velocity
 
 //Stickman
 let stevie;
@@ -83,10 +87,11 @@ let snake;
 
 function preload() {
   //load each background image and store it in a variable
-  hgOne = loadImage("./Assets/BG_01.png");
-  hgTwo = loadImage("./Assets/BG_02.png");
-  hgThree = loadImage("./Assets/BG_03.png");
-  hgFour = loadImage("./Assets/BG_04.png");
+  bg.tutorial = loadImage("./Assets/BG_01.png");
+  bg.bridge = loadImage("./Assets/BG_02.png");
+  bg.snake = loadImage("./Assets/BG_03.png");
+  bg.balls = loadImage("./Assets/BG_04.png");
+  ladder = loadImage("./Assets/Leiter.png");
 
   // load each animation and set frameDelay to 9 with fps variale
   angryAnim = loadAni("./Assets/Sprite_Angry.png", { width: 175, height: 248, frames: 11 });
@@ -148,8 +153,7 @@ function setup() {
 }
 
 function draw() {
-  //Set Sprite Position to Correct Position within frame
-
+  // draw the character at the set position
   if (characterBody) {
     stevie.x = characterBody.body.position.x;
     stevie.y = characterBody.body.position.y;
@@ -158,9 +162,9 @@ function draw() {
     snake.y = height/2;
   }
 
-  //Drawing Background, post it placement and Gate Animation
+  // draw the right assets for each level
   if (currentLevel === "tutorial") {
-    backgroundSetup(hgOne);
+    image(bg.tutorial, 0, 0, width, height);
     snake.visible = false;
 
     push();
@@ -181,14 +185,12 @@ function draw() {
       gateAnim.noLoop();
     }
   } else if (currentLevel === "bridge") {
-    backgroundSetup(hgTwo);
-    snake.visible = false;
+    image(bg.bridge, 0, 0, width, height);
   } else if (currentLevel === "snake") {
-    backgroundSetup(hgThree);
-    snake.visible = true;
+    image(bg.snake, 0, 0, width, height);
   } else if (currentLevel === "balls") {
-    backgroundSetup(hgFour);
-    snake.visible = false;
+    image(bg.balls, 0, 0, width, height);
+    image(ladder, width / 2 - 50, -50);
   }
 
   if (leftBall && rightBall) {
@@ -203,14 +205,16 @@ function draw() {
   drawBodies.forEach((x) => {
     x.draw();
   });
+
   // draw the handdrawn svg shape
   svgShapes.forEach((x) => {
     x.draw();
   });
 
-  if (gameState == "runGame") {
-    //set current frame to zero to replay win and lose anims
-    currentFrame = 0;
+  // Play animations according to gameState
+  switch (gameState) {
+    case "runGame":
+      currentFrame = 0;
 
 
     if(startGame){
@@ -228,37 +232,34 @@ function draw() {
       snake.ani.loop();
     }
 
-    if (!defaultLock) {
-      defaultSequence();
-      defaultLock = true;
-    }
-  }
+      if (!defaultLock) {
+        defaultSequence();
+        defaultLock = true;
+      }
+      break;
 
-  if(gameState === "levelChange"){
-    levelChange();
-    defaultLock = false;
-  }
+ 
 
-  //Diese hier extra, da sie außerhalb des normalen Gameablaufes laufen
-  if (gameState === "failure") {
-    defaultLock = false;
+    case "failure":
+      defaultLock = false;
+      startGame = false;
+      failSequence();
+      break;
+
+    case "win":
+      defaultLock = false;
     startGame = false;
-    failSequence();
-  }
-
-  if (gameState === "win") {
-    defaultLock = false;
-    startGame = false;
-    winSequence();
+      winSequence();
 
     if(currentLevel === "snake"){
       //make sure ani stops at right time
       snake.changeAni("deathSnake");
       snake.ani.noLoop();
     }
+      break;
   }
 
-  //Schwarzer Rahmen um Spielfeld
+  // Draw black frame around canvas for opencv detection
   strokeWeight(10);
   stroke(0);
   noFill();
@@ -294,9 +295,8 @@ function levelChange(){
 }
 
 function winSequence() {
-  //Für Soundeffekte aufteilen
+  // For sound effects
   stevie.changeAni("win");
-  console.log("win animation sequence is active");
 
   textAlign(CENTER);
   textSize(250);
@@ -315,125 +315,83 @@ function winSequence() {
 
     gameState = "runGame";
 
-    // levelChange();
+    switchLevel(currentLevel); // Pass the current level to switchLevel
   }
 }
 
 function failSequence() {
   stevie.changeAni("lose");
-  console.log("Lose animation sequence is active");
 
   textAlign(CENTER);
   textSize(250);
   textStyle(BOLD);
   fill(0);
-  text("YOU SUCK", width / 2, height / 3);
+  text("TRY AGAIN", width / 2, height / 3);
 
   if (stevie.ani.frame - stevie.ani.lastFrame == 0) {
     stevie.ani.frame = 0;
     console.log("lose Ani is complete " + defaultLock);
     gameState = "runGame";
-    // levelSetBack();
   }
 }
-
-//Function for easy setup of Background (shorter in Main Code) - not essential
-function backgroundSetup(imageTitle) {
-  image(imageTitle, 0, 0, width, height);
-}
-
-//Level updates according to win ore lose condotion
-// function levelChange() {
-//   currentLevel++;
-//   createLevel(currentLevel, true);
-
-//   if (svgShapes.length > 0) {
-//     svgShapes.forEach((x) => {
-//       x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-//     });
-//   }
-//   svgShapes = []; // remove old SVG bodies from drawing logic
-// }
-
-// function levelSetBack() {
-//   currentLevel = 1;
-//   createLevel(currentLevel, true);
-
-//   if (svgShapes.length > 0) {
-//     svgShapes.forEach((x) => {
-//       x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-//     });
-//   }
-//   svgShapes = []; // remove old SVG bodies from drawing logic
-// }
-
-// function loadSVG(url) {
-//   return new Promise((resolve, reject) => {
-//     // Ensure that the project is initialized before importing SVG
-//     if (paper.project) {
-//       paper.project.importSVG(url, (item) => {
-//         if (item) {
-//           // Create a new group to hold the simplified paths
-//           const simplifiedGroup = new paper.Group();
-//           const simplifyStrength = 5;
-
-//           // Process the loaded SVG item
-//           item.children.forEach((child) => {
-//             // simplify logic for different types of paper.js objects (path, compound, shape)
-//             if (child instanceof paper.Path) {
-//               child.simplify(simplifyStrength);
-//               simplifiedGroup.addChild(child);
-//             } else if (child instanceof paper.CompoundPath) {
-//               child.simplify(simplifyStrength);
-//               simplifiedGroup.addChild(child);
-//             } else if (child instanceof paper.Shape) {
-//               console.log("Shape object ignored");
-//             }
-//           });
-
-//           // Export the simplified group back to an SVG string
-//           const svgString = simplifiedGroup.exportSVG({ asString: true });
-
-//           // turn that string into a DOM element
-//           const parser = new DOMParser();
-//           const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-//           const paths = svgDoc.getElementsByTagName("path");
-
-//           // Resolve the promise with the simplified SVG path data
-//           resolve(paths);
-//         } else {
-//           reject("Failed to load SVG");
-//         }
-//       });
-//     } else {
-//       reject("Paper.js project is not initialized");
-//     }
-//   });
-// }
 
 function mousePressed() {
   createSVG(exampleSVG.svg, true);
+  // let block = new Block(
+  //   world,
+  //   {
+  //     x: mouseX,
+  //     y: mouseY,
+  //     w: 50,
+  //     h: 50,
+  //     stroke: "black",
+  //     strokeWidth: 2,
+  //   },
+  //   { mass: 100 }
+  // );
+  // drawBodies.push(block);
 }
 
-// Change the current level on key press
-function keyPressed() {
-  gameState = "levelChange";
-  // Create a mapping of level keys to level names
+function switchLevel(input) {
+  // Create a mapping of level names to their next levels
   const levelMapping = {
-    1: "tutorial",
-    2: "bridge",
-    3: "snake",
-    4: "balls",
+    tutorial: "bridge",
+    bridge: "snake",
+    snake: "balls",
+    balls: null, // No next level after "balls"
   };
 
-  // Get the level name based on the key pressed
-  const levelName = levelMapping[key];
+  let nextLevelName;
 
-  // Check if the level name exists in the mapping
-  if (levelName) {
-    createLevel(levelName, true); // Pass the level name instead of the key
-    currentLevel = levelName; // Update the current level
+  // Check if the input is a string (key) or a string (current level)
+  if (!isNaN(input)) {
+    // Convert the string input to a number
+    const key = parseInt(input, 10);
+
+    // Map the key to the corresponding level name
+    const keyMapping = {
+      1: "tutorial",
+      2: "bridge",
+      3: "snake",
+      4: "balls",
+    };
+    nextLevelName = keyMapping[key];
+  } else if (typeof input === "string") {
+    // Get the next level name based on the current level
+    nextLevelName = levelMapping[input];
   }
+
+  // Check if the next level name exists in the mapping
+  if (nextLevelName) {
+    createLevel(nextLevelName, true); // Pass the next level name
+    currentLevel = nextLevelName; // Update the current level
+  } else {
+    console.log("No more levels to switch to.");
+  }
+}
+
+function keyPressed() {
+  switchLevel(key); // Pass the key pressed to switchLevel
 }
 
 function windowResized() {
@@ -478,17 +436,17 @@ function createLevel(levelIndex, clear) {
     drawBodies = [];
     svgShapes = [];
   }
-  // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data
+  // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level object
   let dim = {
-    char: { x: 0 + width / 4, y: height - height / 1 / 5 },
+    char: { x: 0 + width / 6, y: height - height / 1 / 5 },
     tutorial: {
       floor: { w: width, h: height / 1 / 5 },
       base: { w: width / 6, h: height / 12 },
       top: { w: width / 10, h: height / 14 },
     },
     bridge: {
-      leftCliff: { w: width / 2, h: height / 1 / 5 },
-      rightCliff: { w: width / 2.5, h: height / 1 / 5 },
+      leftCliff: { w: width / 3.5, h: height / 1 / 5 },
+      rightCliff: { w: width / 1.65, h: height / 1 / 5 },
       sensor: { w: 100, h: 50 },
     },
     snake: {
@@ -496,17 +454,16 @@ function createLevel(levelIndex, clear) {
       snake: { x: width - width / 3, y: height - height / 1 / 5, w: 350, h: 496 },
     },
     balls: {
-      leftWall: { w: width / 3.5, h: height / 2 },
+      leftWall: { w: width / 2.9, h: height / 1.8 },
       rightWall: { w: width / 3.5 },
-      floor: { w: width, h: height / 1 / 5 },
-      radius: width / 12,
+      floor: { w: width, h: height / 1 / 12 },
+      radius: width / 14,
     },
   };
 
   let levels = {
     tutorial: {
       // tutorial level
-      background: backgroundImgs[0],
       terrain: {
         floor: {
           x: dim.tutorial.floor.w / 2,
@@ -540,10 +497,9 @@ function createLevel(levelIndex, clear) {
     },
     bridge: {
       // bridge level
-      background: backgroundImgs[0],
       terrain: {
         leftCliff: {
-          x: dim.bridge.leftCliff.w / 2,
+          x: dim.bridge.leftCliff.w - dim.bridge.leftCliff.w / 2,
           y: height - dim.bridge.leftCliff.h / 2,
           w: dim.bridge.leftCliff.w,
           h: dim.bridge.leftCliff.h,
@@ -587,7 +543,6 @@ function createLevel(levelIndex, clear) {
     },
     snake: {
       // snake level
-      background: backgroundImgs[0],
       terrain: {
         floor: {
           x: dim.snake.floor.w / 2,
@@ -615,7 +570,7 @@ function createLevel(levelIndex, clear) {
     },
     balls: {
       // balls level
-      background: backgroundImgs[0],
+
       terrain: {
         leftWall: {
           x: dim.balls.leftWall.w / 2,
@@ -639,7 +594,7 @@ function createLevel(levelIndex, clear) {
       spikeBall: {
         left: {
           x: dim.balls.leftWall.w + dim.balls.radius,
-          y: 0 + dim.balls.leftWall.h / 1.5,
+          y: 0 + dim.balls.leftWall.h / 1.2,
           r: dim.balls.radius,
           label: "leftBall",
         },
@@ -675,7 +630,7 @@ function createLevel(levelIndex, clear) {
           h: geo.h,
           color: "white",
           stroke: "black",
-          weight: 2,
+          weight: 6,
         },
         { isStatic: true, label: "terrain" }
       );
@@ -709,7 +664,7 @@ function createLevel(levelIndex, clear) {
             r: spikey.r,
             color: "white",
             stroke: "black",
-            weight: 2,
+            weight: 6,
           },
           { isStatic: true, label: "leftBall" }
         );
@@ -723,7 +678,7 @@ function createLevel(levelIndex, clear) {
             r: spikey.r,
             color: "white",
             stroke: "black",
-            weight: 2,
+            weight: 6,
           },
           { isStatic: true, label: "rightBall" }
         );
@@ -757,7 +712,7 @@ function createLevel(levelIndex, clear) {
             w: button.w,
             h: button.h,
             stroke: "black",
-            weight: 2,
+            weight: 6,
           },
           { isStatic: true, label: "buttonTop" }
         );
@@ -779,9 +734,21 @@ function createLevel(levelIndex, clear) {
   }
 }
 
+// Check velocity of the svg body right before the collision with button
+Matter.Events.on(engine, 
+  "beforeUpdate", function () {
+  if (currentLevel === "tutorial") {
+    Matter.Composite.allBodies(world).forEach((body) => {
+      if (body.label === "drawnBody") {
+        lastVelocity = body.velocity; // Store the current velocity
+      }
+    });
+  }
+});
+
 // check for win/lose conditions by detecting collisions
 Events.on(engine, "collisionStart", function (event) {
-  if (gameState === "runGame" && drawnSVG) {
+  if (gameState === "runGame" && matterSVG) {
     const pairs = event.pairs;
     // check win/lose conditions for bridge level
     if (currentLevel === "bridge") {
@@ -798,12 +765,12 @@ Events.on(engine, "collisionStart", function (event) {
       });
 
       // check if the drawn object spans across the gap
-      if (Query.collides(drawnSVG.body, winSensors).length == 2) {
+      if (Query.collides(matterSVG.body, winSensors).length == 2) {
         gameState = "win";
       }
 
       // check if the drawn object is too small for the gap
-      if (Query.collides(drawnSVG.body, failSensors).length > 0) {
+      if (Query.collides(matterSVG.body, failSensors).length > 0) {
         gameState = "failure";
       }
     } else if (currentLevel === "balls") {
@@ -843,8 +810,8 @@ Events.on(engine, "collisionStart", function (event) {
       }
     } else if (currentLevel === "tutorial") {
       // tutorial and puzzle button level
-      const massThreshold = 10;
-      const velocityThreshold = 10;
+      const massThreshold = 13;
+      const velocityThreshold = 9;
 
       pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
@@ -857,7 +824,8 @@ Events.on(engine, "collisionStart", function (event) {
         // Check if the colliding body has the required mass and velocity
         if (buttonBody && collidingBody) {
           const collidingMass = collidingBody.mass;
-          const collidingVelocity = Matter.Vector.magnitude(collidingBody.velocity);
+          const collidingVelocity = Matter.Vector.magnitude(lastVelocity);
+          console.log(collidingMass);
 
           if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
             // Press the button down
@@ -965,7 +933,7 @@ function createSVG(svg, debug) {
       svgShapes = [];
 
       // create svg body from path data
-      drawnSVG = new PolygonFromSVG(
+      matterSVG = new PolygonFromSVG(
         world,
         {
           x: pos.x,
@@ -975,16 +943,17 @@ function createSVG(svg, debug) {
           stroke: "black",
           weight: 2,
         },
-        { isStatic: false, mass: 100, label: "drawnBody" }
+        { isStatic: false, label: "drawnBody", friction: 0.5, restitution: 0.6 }
       );
 
       // remove svg body if it collides with other geometry on spawn
-      if (Query.collides(drawnSVG.body, levelBodies).length > 0) {
+      if (Query.collides(matterSVG.body, levelBodies).length > 0) {
         console.log("collision of svg body with level geometry");
-        drawnSVG.removeBody(world, drawnSVG);
+        matterSVG.removeBody(world, matterSVG);
       } else {
-        svgShapes.push(drawnSVG);
-        console.log(drawnSVG);
+        svgShapes.push(matterSVG);
+        // NOTE: mass difference between matterSVG and body in collision events
+        console.log(matterSVG.body.mass);
       }
     }
   });

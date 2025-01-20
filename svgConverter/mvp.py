@@ -17,14 +17,14 @@ if not os.path.exists(output_directory):
 
 
 
-def notify_svg_conversion(cropped_file, color, stored_position):
+def notify_svg_conversion(cropped_file, color, smoothed_position):
     """
     Write a notification to the SVG conversion file indicating a new image is ready.
     """
     with open(notification_file, "w") as f:
         f.write(f"{cropped_file}, {color}")
     print(f"Notification written to {notification_file} - Color: {color}")
-    write_position_to_json(stored_position[0], stored_position[1], color)
+    write_position_to_json(smoothed_position[0], smoothed_position[1], color)
 
 def detect_projection_area(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -110,6 +110,28 @@ def detect_postit_and_draw(frame, projection_area=None):
                     return warped, detected_color
     return None, None
 
+def enhance_contrast(image):
+    """
+    Enhance the contrast of the input image using CLAHE.
+    """
+    # Convert the image to LAB color space
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    
+    # Split the LAB image into L, A, and B channels
+    l, a, b = cv2.split(lab)
+    
+    # Apply CLAHE to the L (lightness) channel
+    clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8, 8))
+    l = clahe.apply(l)
+    
+    # Merge the enhanced L channel back with A and B channels
+    enhanced_lab = cv2.merge((l, a, b))
+    
+    # Convert the LAB image back to BGR color space
+    enhanced_image = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
+    
+    return enhanced_image
+
 def get_relative_position(postit_rect, projection_rect):
     width, height = 1.0, 1.0
     M = cv2.getPerspectiveTransform(projection_rect, np.array([
@@ -179,7 +201,7 @@ def detect_drawing(prev_frame, current_frame):
 
 
 def main():
-    cap = cv2.VideoCapture(2)
+    cap = cv2.VideoCapture(3)
     prev_frame = None
     drawing_detected = False
     no_movement_counter = 0
@@ -204,7 +226,9 @@ def main():
             break
 
         frame = cv2.resize(frame, (640, 480))
-
+        
+        # Enhance contrast using CLAHE
+        frame = enhance_contrast(frame)
          # Detect the projection area
         projection_area = detect_projection_area(frame)
 
@@ -247,7 +271,7 @@ def main():
             # Draw the Post-it center
             postit_center = np.mean(postit_rect, axis=0).astype(int)
             cv2.circle(frame, tuple(postit_center), 5, (0, 0, 255), -1)
-
+           
             # Display the smoothed and stored relative positions
             smoothed_text = f"Smoothed Pos: ({smoothed_position[0]:.2f}, {smoothed_position[1]:.2f})"
             stored_text = f"Stored Pos: ({stored_position[0]:.2f}, {stored_position[1]:.2f})"
@@ -296,7 +320,7 @@ def main():
                 file_path = os.path.join(output_directory, "detected_postit.png")
                 cv2.imwrite(file_path, cropped)
                 
-                notify_svg_conversion(file_path, detected_color, stored_position)
+                notify_svg_conversion(file_path, detected_color, relative_position)
 
                 
 
@@ -316,13 +340,27 @@ def main():
                     print("Validation failed. Discarding image.")
                     drawing_detected = False
                     no_movement_counter = 0"""
- 
+
             prev_frame = gray_cropped
+
+        # Failsafe key 'h' to save cropped image and notify SVG conversion
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('h') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit.png")
+            cv2.imwrite(file_path, cropped)
+            print(f"Failsafe: Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+
+        if key == ord('q'):
+            break
 
         cv2.imshow("Webcam", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        """ if cv2.waitKey(1) & 0xFF == ord('q'):
+            break """
 
     cap.release()
     cv2.destroyAllWindows()
