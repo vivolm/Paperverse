@@ -145,14 +145,6 @@ function draw() {
   if (currentLevel === "tutorial") {
     image(bg.tutorial, 0, 0, width, height);
 
-    push();
-    rectMode(CENTER);
-    stroke(0);
-    strokeWeight(6);
-    noFill();
-    drawingContext.setLineDash([8, 4]);
-    rect(width / 2, height / 4, 260, 260);
-    pop();
 
     if (gameState === "runGame") {
       animation(gateHold, width / 2 + width / 4, height / 2 - height / 9);
@@ -663,7 +655,8 @@ function createLevel(levelIndex, clear) {
 }
 
 // Check velocity of the svg body right before the collision with button
-Matter.Events.on(engine, "beforeUpdate", function () {
+Matter.Events.on(engine, 
+  "beforeUpdate", function () {
   if (currentLevel === "tutorial") {
     Matter.Composite.allBodies(world).forEach((body) => {
       if (body.label === "drawnBody") {
@@ -737,8 +730,8 @@ Events.on(engine, "collisionStart", function (event) {
       }
     } else if (currentLevel === "tutorial") {
       // tutorial and puzzle button level
-      const massThreshold = 8;
-      const velocityThreshold = 10;
+      const massThreshold = 13;
+      const velocityThreshold = 9;
 
       pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
@@ -752,7 +745,7 @@ Events.on(engine, "collisionStart", function (event) {
         if (buttonBody && collidingBody) {
           const collidingMass = collidingBody.mass;
           const collidingVelocity = Matter.Vector.magnitude(lastVelocity);
-          console.log(collidingBody);
+          console.log(collidingMass);
 
           if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
             // Press the button down
