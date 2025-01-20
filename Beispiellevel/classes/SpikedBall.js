@@ -51,7 +51,7 @@ class SpikedBall extends Ball {
         ],
         {
           angle: angle + Math.PI / 2,
-          isStatic: true, // Make spikes dynamic
+          isStatic: true,
         }
       );
 
@@ -71,7 +71,7 @@ class SpikedBall extends Ball {
   }
 
   drawSpikes() {
-    stroke(255, 0, 0); // Color for spikes
+    stroke(0); // Color for spikes
     // fill(255, 0, 0); // Fill color for spikes
     for (const spike of this.spikes) {
       const { vertices } = spike; // Get the vertices of the spike

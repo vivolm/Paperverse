@@ -87,6 +87,8 @@ let lastVelocity = { x: 0, y: 0 }; // Variable to store the last velocity
 let stevie;
 let snake;
 
+let outro;
+
 function preload() {
   font = loadFont("./Assets/lazy_dog.ttf");
 
@@ -143,7 +145,9 @@ function preload() {
 
 function setup() {
   const canvas = createCanvas(windowWidth, windowHeight + 10);
+  outro = createVideo("./Assets/PaperverseOutro.mp4");
   canvas.parent("sketch-holder");
+  outro.hide();
 
   // set paper.js working space to p5.js canvas
   canvas.id("myCanvas");
@@ -190,16 +194,19 @@ function draw() {
     snake.visible = false;
     image(bg.balls, 0, 0, width, height);
     image(ladder, width / 2 - 50, -50);
+
+    if (leftBall && rightBall) {
+      if (leftRotating) {
+        Body.rotate(leftBall.body, radians(-0.5));
+      }
+      if (rightRotating) {
+        Body.rotate(rightBall.body, radians(0.5));
+      }
+    } else {
+      image(outro, width / 2, height / 2, width, height);
+    }
   }
 
-  if (leftBall && rightBall) {
-    if (leftRotating) {
-      Body.rotate(leftBall.body, radians(-0.5));
-    }
-    if (rightRotating) {
-      Body.rotate(rightBall.body, radians(0.5));
-    }
-  }
   // draw all bodies
   drawBodies.forEach((x) => {
     x.draw();
@@ -855,34 +862,34 @@ socket.onmessage = (ev) => {
   createSVG(message.svg, false);
 };
 
-// function simplifySVG(svg) {
-//   let path = new Path(svg);
-//   // Create a new group to hold the simplified paths
-//   const simplifiedGroup = new paper.Group();
-//   const simplifyStrength = 5;
+function simplifySVG(svg) {
+  let path = new Path(svg);
+  // Create a new group to hold the simplified paths
+  const simplifiedGroup = new paper.Group();
+  const simplifyStrength = 5;
 
-//   // simplify logic for different labels of paper.js objects (path, compound, shape)
-//   if (path instanceof paper.Path) {
-//     path.simplify(simplifyStrength);
-//     simplifiedGroup.addChild(path);
-//   }
+  // simplify logic for different labels of paper.js objects (path, compound, shape)
+  if (path instanceof paper.Path) {
+    path.simplify(simplifyStrength);
+    simplifiedGroup.addChild(path);
+  }
 
-//   // else if (child instanceof paper.CompoundPath) {
-//   //   child.simplify(simplifyStrength);
-//   //   simplifiedGroup.addChild(child);
-//   // } else if (child instanceof paper.Shape) {
-//   //   console.log("Shape object ignored");
-//   // }
+  // else if (child instanceof paper.CompoundPath) {
+  //   child.simplify(simplifyStrength);
+  //   simplifiedGroup.addChild(child);
+  // } else if (child instanceof paper.Shape) {
+  //   console.log("Shape object ignored");
+  // }
 
-//   // Export the simplified group back to an SVG string
-//   const svgString = simplifiedGroup.exportSVG({ asString: true });
+  // Export the simplified group back to an SVG string
+  const svgString = simplifiedGroup.exportSVG({ asString: true });
 
-//   // turn that string into a DOM element
-//   const parser = new DOMParser();
-//   const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
-//   const paths = svgDoc.getElementsByTagName("path");
-//   return paths;
-// }
+  // turn that string into a DOM element
+  const parser = new DOMParser();
+  const svgDoc = parser.parseFromString(svgString, "image/svg+xml");
+  const paths = svgDoc.getElementsByTagName("path");
+  return paths;
+}
 
 function createSVG(svg, debug) {
   getDrawPosition().then((pos) => {

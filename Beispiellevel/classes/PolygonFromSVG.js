@@ -17,20 +17,14 @@ class PolygonFromSVG extends Block {
     } else {
       if (this.attributes.fromPath) {
         // use a path provided directly
-        let vertices = Matter.Svg.pathToVertices(
-          this.attributes.fromPath,
-          this.attributes.sample
-        );
+        let vertices = Matter.Svg.pathToVertices(this.attributes.fromPath, this.attributes.sample);
         this.addBodyVertices(vertices);
       } else {
         if (this.attributes.fromId) {
           // use a path of SVG embedded in current HTML page
           let path = document.getElementById(this.attributes.fromId);
           if (null != path) {
-            let vertices = Matter.Svg.pathToVertices(
-              path,
-              this.attributes.sample
-            );
+            let vertices = Matter.Svg.pathToVertices(path, this.attributes.sample);
             this.addBodyVertices(vertices);
           }
         } else {
@@ -43,10 +37,7 @@ class PolygonFromSVG extends Block {
             const parser = new DOMParser();
             const svgDoc = parser.parseFromString(response, "image/svg+xml");
             const path = svgDoc.querySelector("path");
-            let vertices = Matter.Svg.pathToVertices(
-              path,
-              this.attributes.sample
-            );
+            let vertices = Matter.Svg.pathToVertices(path, this.attributes.sample);
             this.addBodyVertices(vertices);
             Matter.World.add(this.world, [this.body]);
             if (this.attributes.done) {
@@ -54,28 +45,17 @@ class PolygonFromSVG extends Block {
             }
           } else {
             let that = this;
-            httpGet(
-              this.attributes.fromFile,
-              "text",
-              false,
-              function (response) {
-                const parser = new DOMParser();
-                const svgDoc = parser.parseFromString(
-                  response,
-                  "image/svg+xml"
-                );
-                const path = svgDoc.querySelector("path");
-                let vertices = Matter.Svg.pathToVertices(
-                  path,
-                  that.attributes.sample
-                );
-                that.addBodyVertices(vertices);
-                Matter.Composite.add(that.world, [that.body]);
-                if (that.attributes.done) {
-                  that.attributes.done(that, false);
-                }
+            httpGet(this.attributes.fromFile, "text", false, function (response) {
+              const parser = new DOMParser();
+              const svgDoc = parser.parseFromString(response, "image/svg+xml");
+              const path = svgDoc.querySelector("path");
+              let vertices = Matter.Svg.pathToVertices(path, that.attributes.sample);
+              that.addBodyVertices(vertices);
+              Matter.Composite.add(that.world, [that.body]);
+              if (that.attributes.done) {
+                that.attributes.done(that, false);
               }
-            );
+            });
           }
         }
       }
@@ -93,11 +73,7 @@ class PolygonFromSVG extends Block {
     this.body = Matter.Bodies.fromVertices(
       0,
       0,
-      Matter.Vertices.scale(
-        vertices,
-        this.attributes.scale,
-        this.attributes.scale
-      ),
+      Matter.Vertices.scale(vertices, this.attributes.scale, this.attributes.scale),
       this.options,
       0.15,
       0.2
@@ -121,20 +97,7 @@ class PolygonFromSVG extends Block {
         };
       }
     } else if (this.attributes.fromPath) {
-      console.log(
-        "Could not construct body for path: ",
-        this.attributes.fromPath
-      );
-    } else if (this.attributes.fromId) {
-      console.log(
-        "Could not construct body for path: ",
-        this.attributes.fromId
-      );
-    } else if (this.attributes.fromFile) {
-      console.log(
-        "Could not construct body for path: ",
-        this.attributes.fromFile
-      );
+      console.log("Simplifying this path to make it work", this.attributes.fromPath);
     }
   }
 
