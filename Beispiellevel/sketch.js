@@ -147,11 +147,10 @@ function setup() {
   const canvas = createCanvas(windowWidth, windowHeight + 10);
   outro = createVideo("./Assets/PaperverseOutro.mp4");
   outro.parent("sketchHolder");
-  // outro.hide();
-  canvas.parent("sketchHolder");
-
   outro.size(width, height);
-  outro.loop();
+  outro.stop();
+  outro.hide();
+  canvas.parent("sketchHolder");
 
   // set paper.js working space to p5.js canvas
   canvas.id("myCanvas");
@@ -209,10 +208,11 @@ function draw() {
     if (rightRotating) {
       Body.rotate(rightBall.body, radians(0.5));
     }
-  } else {
-    // image(outro, width / 2, height / 2, width, height);
+    if (!leftRotating && !rightRotating) {
+      outro.loop();
+      outro.play();
+    }
   }
-
   // draw all bodies
   drawBodies.forEach((x) => {
     x.draw();
@@ -348,7 +348,6 @@ function switchLevel(input) {
     createLevel(nextLevelName, true); // Pass the next level name
     currentLevel = nextLevelName; // Update the current level
   } else {
-    outro.play();
   }
 }
 
