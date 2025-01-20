@@ -146,8 +146,12 @@ function preload() {
 function setup() {
   const canvas = createCanvas(windowWidth, windowHeight + 10);
   outro = createVideo("./Assets/PaperverseOutro.mp4");
-  canvas.parent("sketch-holder");
-  outro.hide();
+  outro.parent("sketchHolder");
+  // outro.hide();
+  canvas.parent("sketchHolder");
+
+  outro.size(width, height);
+  outro.loop();
 
   // set paper.js working space to p5.js canvas
   canvas.id("myCanvas");
@@ -198,16 +202,15 @@ function draw() {
     noTint();
   }
 
-    if (leftBall && rightBall) {
-      if (leftRotating) {
-        Body.rotate(leftBall.body, radians(-0.5));
-      }
-      if (rightRotating) {
-        Body.rotate(rightBall.body, radians(0.5));
-      }
-    } else {
-      image(outro, width / 2, height / 2, width, height);
+  if (leftBall && rightBall) {
+    if (leftRotating) {
+      Body.rotate(leftBall.body, radians(-0.5));
     }
+    if (rightRotating) {
+      Body.rotate(rightBall.body, radians(0.5));
+    }
+  } else {
+    // image(outro, width / 2, height / 2, width, height);
   }
 
   // draw all bodies
@@ -309,19 +312,6 @@ function failSequence() {
 
 function mousePressed() {
   createSVG(exampleSVG.svg, true);
-  // let block = new Block(
-  //   world,
-  //   {
-  //     x: mouseX,
-  //     y: mouseY,
-  //     w: 50,
-  //     h: 50,
-  //     stroke: "black",
-  //     strokeWidth: 2,
-  //   },
-  //   { mass: 100 }
-  // );
-  // drawBodies.push(block);
 }
 
 function switchLevel(input) {
@@ -358,7 +348,7 @@ function switchLevel(input) {
     createLevel(nextLevelName, true); // Pass the next level name
     currentLevel = nextLevelName; // Update the current level
   } else {
-    console.log("No more levels to switch to.");
+    outro.play();
   }
 }
 
@@ -938,7 +928,6 @@ function createSVG(svg, debug) {
       } else {
         svgShapes.push(matterSVG);
         // NOTE: mass difference between matterSVG and body in collision events
-        console.log(matterSVG.body.mass);
       }
     }
   });
