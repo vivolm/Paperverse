@@ -373,8 +373,8 @@ function createLevel(levelIndex, clear) {
       top: { w: width / 10, h: height / 14 },
     },
     bridge: {
-      leftCliff: { w: width / 2, h: height / 1 / 5 },
-      rightCliff: { w: width / 2.5, h: height / 1 / 5 },
+      leftCliff: { w: width / 3.5, h: height / 1 / 5 },
+      rightCliff: { w: width / 1.65, h: height / 1 / 5 },
       sensor: { w: 100, h: 50 },
     },
     snake: {
@@ -427,7 +427,7 @@ function createLevel(levelIndex, clear) {
       // bridge level
       terrain: {
         leftCliff: {
-          x: dim.bridge.leftCliff.w / 2,
+          x: dim.bridge.leftCliff.w - dim.bridge.leftCliff.w / 2,
           y: height - dim.bridge.leftCliff.h / 2,
           w: dim.bridge.leftCliff.w,
           h: dim.bridge.leftCliff.h,
