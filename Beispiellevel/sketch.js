@@ -63,12 +63,6 @@ let bg = {
   balls: null,
 };
 
-let hgOne;
-let hgTwo;
-let hgThree;
-let hgFour;
-let ladder;
-
 //Sound
 let angrySound;
 
@@ -141,13 +135,13 @@ function setup() {
 }
 
 function draw() {
-  //Set Sprite Position to Correct Position within frame
+  // draw the character at the set position
   if (characterBody) {
     stevie.x = characterBody.body.position.x;
     stevie.y = characterBody.body.position.y;
   }
 
-  //Drawing Background, post it placement and Gate Animation
+  // draw the right assets for each level
   if (currentLevel === "tutorial") {
     image(bg.tutorial, 0, 0, width, height);
 
@@ -188,33 +182,35 @@ function draw() {
   drawBodies.forEach((x) => {
     x.draw();
   });
+
   // draw the handdrawn svg shape
   svgShapes.forEach((x) => {
     x.draw();
   });
 
-  if (gameState == "runGame") {
-    //set current frame to zero to replay win and lose anims
-    currentFrame = 0;
+  // Play animations according to gameState
+  switch (gameState) {
+    case "runGame":
+      currentFrame = 0;
 
-    if (!defaultLock) {
-      defaultSequence();
-      defaultLock = true;
-    }
+      if (!defaultLock) {
+        defaultSequence();
+        defaultLock = true;
+      }
+      break;
+
+    case "failure":
+      defaultLock = false;
+      failSequence();
+      break;
+
+    case "win":
+      defaultLock = false;
+      winSequence();
+      break;
   }
 
-  //Diese hier extra, da sie außerhalb des normalen Gameablaufes laufen
-  if (gameState === "failure") {
-    defaultLock = false;
-    failSequence();
-  }
-
-  if (gameState === "win") {
-    defaultLock = false;
-    winSequence();
-  }
-
-  //Schwarzer Rahmen um Spielfeld
+  // Draw black frame around canvas for opencv detection
   strokeWeight(10);
   stroke(0);
   noFill();
@@ -232,9 +228,8 @@ async function defaultSequence() {
 }
 
 function winSequence() {
-  //Für Soundeffekte aufteilen
+  // For sound effects
   stevie.changeAni("win");
-  console.log("win animation sequence is active");
 
   textAlign(CENTER);
   textSize(250);
@@ -248,93 +243,83 @@ function winSequence() {
     gateAnim.loop();
     gameState = "runGame";
 
-    // levelChange();
+    switchLevel(currentLevel); // Pass the current level to switchLevel
   }
 }
 
 function failSequence() {
   stevie.changeAni("lose");
-  console.log("Lose animation sequence is active");
 
   textAlign(CENTER);
   textSize(250);
   textStyle(BOLD);
   fill(0);
-  text("YOU SUCK", width / 2, height / 3);
+  text("TRY AGAIN", width / 2, height / 3);
 
   if (stevie.ani.frame - stevie.ani.lastFrame == 0) {
     stevie.ani.frame = 0;
     console.log("lose Ani is complete " + defaultLock);
     gameState = "runGame";
-    // levelSetBack();
   }
 }
-
-//Function for easy setup of Background (shorter in Main Code) - not essential
-function backgroundSetup(imageTitle) {
-  image(imageTitle, 0, 0, width, height);
-}
-
-//Level updates according to win ore lose condotion
-// function levelChange() {
-//   currentLevel++;
-//   createLevel(currentLevel, true);
-
-//   if (svgShapes.length > 0) {
-//     svgShapes.forEach((x) => {
-//       x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-//     });
-//   }
-//   svgShapes = []; // remove old SVG bodies from drawing logic
-// }
-
-// function levelSetBack() {
-//   currentLevel = 1;
-//   createLevel(currentLevel, true);
-
-//   if (svgShapes.length > 0) {
-//     svgShapes.forEach((x) => {
-//       x.removeBody(); // limit SVG bodies to just one to tighten gameplay and prevent level workarounds
-//     });
-//   }
-//   svgShapes = []; // remove old SVG bodies from drawing logic
-// }
 
 function mousePressed() {
-  // createSVG(exampleSVG.svg, true);
-  let block = new Block(
-    world,
-    {
-      x: mouseX,
-      y: mouseY,
-      w: 50,
-      h: 50,
-      stroke: "black",
-      strokeWidth: 2,
-    },
-    { mass: 100 }
-  );
-  drawBodies.push(block);
+  createSVG(exampleSVG.svg, true);
+  // let block = new Block(
+  //   world,
+  //   {
+  //     x: mouseX,
+  //     y: mouseY,
+  //     w: 50,
+  //     h: 50,
+  //     stroke: "black",
+  //     strokeWidth: 2,
+  //   },
+  //   { mass: 100 }
+  // );
+  // drawBodies.push(block);
 }
 
-// Change the current level on key press
-function keyPressed() {
-  // Create a mapping of level keys to level names
+function switchLevel(input) {
+  // Create a mapping of level names to their next levels
   const levelMapping = {
-    1: "tutorial",
-    2: "bridge",
-    3: "snake",
-    4: "balls",
+    tutorial: "bridge",
+    bridge: "snake",
+    snake: "balls",
+    balls: null, // No next level after "balls"
   };
 
-  // Get the level name based on the key pressed
-  const levelName = levelMapping[key];
+  let nextLevelName;
 
-  // Check if the level name exists in the mapping
-  if (levelName) {
-    createLevel(levelName, true); // Pass the level name instead of the key
-    currentLevel = levelName; // Update the current level
+  // Check if the input is a string (key) or a string (current level)
+  if (!isNaN(input)) {
+    // Convert the string input to a number
+    const key = parseInt(input, 10);
+
+    // Map the key to the corresponding level name
+    const keyMapping = {
+      1: "tutorial",
+      2: "bridge",
+      3: "snake",
+      4: "balls",
+    };
+    nextLevelName = keyMapping[key];
+  } else if (typeof input === "string") {
+    // Get the next level name based on the current level
+    nextLevelName = levelMapping[input];
   }
+
+  // Check if the next level name exists in the mapping
+  if (nextLevelName) {
+    createLevel(nextLevelName, true); // Pass the next level name
+    currentLevel = nextLevelName; // Update the current level
+  } else {
+    console.log("No more levels to switch to.");
+  }
+}
+
+function keyPressed() {
+  switchLevel(key); // Pass the key pressed to switchLevel
 }
 
 function windowResized() {
