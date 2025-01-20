@@ -316,13 +316,27 @@ def main():
                     print("Validation failed. Discarding image.")
                     drawing_detected = False
                     no_movement_counter = 0"""
- 
+
             prev_frame = gray_cropped
+
+        # Failsafe key 'h' to save cropped image and notify SVG conversion
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('h') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit.png")
+            cv2.imwrite(file_path, cropped)
+            print(f"Failsafe: Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+
+        if key == ord('q'):
+            break
 
         cv2.imshow("Webcam", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+        """ if cv2.waitKey(1) & 0xFF == ord('q'):
+            break """
 
     cap.release()
     cv2.destroyAllWindows()
