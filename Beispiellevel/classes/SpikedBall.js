@@ -58,7 +58,7 @@ class SpikedBall extends Ball {
       // Translate the spike to its base position
       Matter.Body.setPosition(spike, { x: baseX, y: baseY });
 
-      if (i >= 5 && i <= 8) {
+      if (i >= 7 && i <= 10) {
         this.spikes.push(spike); // Add spike to the spikes array
       }
     }

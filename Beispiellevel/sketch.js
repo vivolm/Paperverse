@@ -147,11 +147,11 @@ function draw() {
 
     push();
     rectMode(CENTER);
-    stroke(247, 54, 0);
-    strokeWeight(2);
+    stroke(0);
+    strokeWeight(6);
     noFill();
-    drawingContext.setLineDash([5, 5]);
-    rect(width / 2, height / 4, 200, 200);
+    drawingContext.setLineDash([8, 4]);
+    rect(width / 2, height / 4, 260, 260);
     pop();
 
     if (gameState === "runGame") {
@@ -364,7 +364,7 @@ function createLevel(levelIndex, clear) {
     drawBodies = [];
     svgShapes = [];
   }
-  // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level data
+  // set responsive dimensions of bodies seperately, so they can be accessed for calculations in level object
   let dim = {
     char: { x: 0 + width / 6, y: height - height / 1 / 5 },
     tutorial: {
@@ -382,7 +382,7 @@ function createLevel(levelIndex, clear) {
       snake: { x: width - width / 3, y: height - height / 1 / 5, w: 350, h: 496 },
     },
     balls: {
-      leftWall: { w: width / 2.9, h: height / 1.7 },
+      leftWall: { w: width / 2.9, h: height / 1.8 },
       rightWall: { w: width / 3.5 },
       floor: { w: width, h: height / 1 / 12 },
       radius: width / 14,
@@ -558,7 +558,7 @@ function createLevel(levelIndex, clear) {
           h: geo.h,
           color: "white",
           stroke: "black",
-          weight: 2,
+          weight: 6,
         },
         { isStatic: true, label: "terrain" }
       );
@@ -592,7 +592,7 @@ function createLevel(levelIndex, clear) {
             r: spikey.r,
             color: "white",
             stroke: "black",
-            weight: 2,
+            weight: 6,
           },
           { isStatic: true, label: "leftBall" }
         );
@@ -606,7 +606,7 @@ function createLevel(levelIndex, clear) {
             r: spikey.r,
             color: "white",
             stroke: "black",
-            weight: 2,
+            weight: 6,
           },
           { isStatic: true, label: "rightBall" }
         );
@@ -640,7 +640,7 @@ function createLevel(levelIndex, clear) {
             w: button.w,
             h: button.h,
             stroke: "black",
-            weight: 2,
+            weight: 6,
           },
           { isStatic: true, label: "buttonTop" }
         );
@@ -752,7 +752,7 @@ Events.on(engine, "collisionStart", function (event) {
         if (buttonBody && collidingBody) {
           const collidingMass = collidingBody.mass;
           const collidingVelocity = Matter.Vector.magnitude(lastVelocity);
-          console.log(collidingMass);
+          console.log(collidingBody);
 
           if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
             // Press the button down
@@ -878,6 +878,8 @@ function createSVG(svg, debug) {
         matterSVG.removeBody(world, matterSVG);
       } else {
         svgShapes.push(matterSVG);
+        // NOTE: mass difference between matterSVG and body in collision events
+        console.log(matterSVG.body.mass);
       }
     }
   });
