@@ -1,3 +1,6 @@
+//Responsible for extracting red drawing from image and conversion into SVG
+//Sends SVG as string per websocket to frontend
+
 const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
@@ -9,7 +12,6 @@ const flagFile = path.join(sharedDir, "ready_for_svg.txt");
 const redFilteredImagePath = "../output/red_filtered.png";
 const simplifiedImagePath = "../output/simplified.png";
 const processedImagePath = "../output/processed.png";
-const outputSvg = "../output/output.svg";
 const ws = new WebSocket("ws://localhost:8080");
 
 
@@ -19,34 +21,7 @@ ws.on("open", () => {
     ws.send(JSON.stringify({ type: "node" })); // Identify as Node client
 });
 
-/* ws.on("message", (message) => {
-    const data = JSON.parse(message);
-    console.log("got message.")
-    if (data.type === "position") {
-        const position = data.position;
-        console.log("New position data received:", position);
 
-        inputImage = "./shared/detected_postit.png"
-        color = "yellow"
-
-        console.log(`Processing file: ${inputImage}, Color: ${color}`);
-
-        
-
-        // Process the image and trigger SVG conversion
-        extractRedParts(inputImage, redFilteredImagePath)
-            .then(() => simplifyImage(redFilteredImagePath, simplifiedImagePath))
-            .then(() => preprocessImage(simplifiedImagePath, processedImagePath))
-            .then(() => {
-                convertToSvg(position); // Pass the position to SVG conversion
-            })
-            .catch(console.error);
-    }
-});
- */
-
-
-// Function to extract red parts of the image
 // Function to extract red parts of the image
 async function extractRedParts(inputImage, outputImage) {
   console.log("Extracting red parts of the image...");

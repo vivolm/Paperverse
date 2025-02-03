@@ -1,7 +1,13 @@
+#Responsible for detection of Post-it and capturing Image of drawing
+#Notifies svgConverter.js as soon as Postit is detected
+#Stores relative position of Post-it in JSON-file
+
 import cv2
 import numpy as np
 import os
 import json
+
+
 
 # Define the shared directory and notification file paths
 output_directory = "./shared"
@@ -12,60 +18,17 @@ metadata_file = os.path.join(output_directory, "metadata.json")
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
-def notify_svg_conversion(file_path, detected_color):
+
+
+
+def notify_svg_conversion(cropped_file, color, smoothed_position):
     """
-    Writes a .txt file to notify about the SVG conversion.
-
-    Parameters:
-        file_path (str): The path to the cropped image file.
-        detected_color (str): The detected color of the Post-it.
-        position (tuple): The position of the Post-it (x, y coordinates).
-        output_directory (str): Directory to save the .txt file.
-        file_name (str): Name of the .txt file to save (default is 'conversion_info.txt').
-
-    Returns:
-        str: The file path where the .txt file was saved, or None if the save failed.
+    Write a notification to the SVG conversion file indicating a new image is ready.
     """
-    if not file_path:
-        print("Error: Image file path is invalid, cannot write conversion info.")
-        return None
-
-    try:
-        with open(notification_file, 'w') as f:
-           with open(notification_file, 'w') as f:
-                f.write(f"{file_path},{detected_color}")
-
-        print(f"SVG conversion info saved at {notification_file}")
-        
-        return notification_file
-    except Exception as e:
-        print(f"Error writing SVG notification info: {e}")
-        return None
-
-def save_cropped_image(cropped, file_name="detected_postit.png"):
-    """
-    Saves the cropped Post-it image to disk.
-
-    Parameters:
-        cropped (ndarray): The cropped image to save.
-        output_directory (str): Directory to save the image in.
-        file_name (str): Name of the file to save 
-
-    Returns:
-        str: The file path where the image was saved, or None if the save failed.
-    """
-    if cropped is None:
-        print("Error: Cropped image is None, cannot save.")
-        return None
-    
-    file_path = os.path.join(output_directory, file_name)
-    try:
-        cv2.imwrite(file_path, cropped)
-        print(f"Cropped image saved at {file_path}")
-        return file_path
-    except Exception as e:
-        print(f"Error saving cropped image: {e}")
-        return None
+    with open(notification_file, "w") as f:
+        f.write(f"{cropped_file}, {color}")
+    print(f"Notification written to {notification_file} - Color: {color}")
+    write_position_to_json(smoothed_position[0], smoothed_position[1], color)
 
 def detect_projection_area(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -94,8 +57,8 @@ def detect_postit_and_draw(frame, projection_area=None):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     # Define HSV ranges for yellow and blue Post-its
-    lower_yellow = np.array([20, 30, 70])
-    upper_yellow = np.array([50, 255, 255])
+    lower_yellow = np.array([20, 30, 60])
+    upper_yellow = np.array([80, 255, 255])
 
     lower_blue = np.array([90, 50, 50])
     upper_blue = np.array([130, 255, 255])
@@ -150,6 +113,28 @@ def detect_postit_and_draw(frame, projection_area=None):
                     detect_postit_and_draw.last_contour = approx
                     return warped, detected_color
     return None, None
+
+def enhance_contrast(image):
+    """
+    Enhance the contrast of the input image using CLAHE.
+    """
+    # Convert the image to LAB color space
+    lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    
+    # Split the LAB image into L, A, and B channels
+    l, a, b = cv2.split(lab)
+    
+    # Apply CLAHE to the L (lightness) channel
+    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(8, 8))
+    l = clahe.apply(l)
+    
+    # Merge the enhanced L channel back with A and B channels
+    enhanced_lab = cv2.merge((l, a, b))
+    
+    # Convert the LAB image back to BGR color space
+    enhanced_image = cv2.cvtColor(enhanced_lab, cv2.COLOR_LAB2BGR)
+    
+    return enhanced_image
 
 def get_relative_position(postit_rect, projection_rect):
     width, height = 1.0, 1.0
@@ -216,28 +201,28 @@ def detect_drawing(prev_frame, current_frame):
     diff = cv2.absdiff(prev_frame, current_frame)
     _, thresh = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
     non_zero_pixels = cv2.countNonZero(thresh)
-    return non_zero_pixels > 1500
+    return non_zero_pixels > 100
 
 
 def main():
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(2)
     prev_frame = None
     drawing_detected = False
     no_movement_counter = 0
-    movement_threshold = 60
-
-    postit_detected = False
-    postit_removed = False
-    drawing_completed = False
-    drawing_validated = False
-     # Tolerance for temporary obstructions
-
+    movement_threshold = 5
+    
 
      # Initialize smoothing variables for relative position
     alpha = 0.2  # Smoothing factor for EMA (0 < alpha <= 1)
     smoothed_position = None  # To store the smoothed position
     stored_position = None  # To store the position that updates only on significant movement
     movement_threshold_distance = 0.05  # Threshold for significant movement in relative position (normalized units)
+    stored_projection_area = None
+    
+
+    
+    
+
 
     while True:
         ret, frame = cap.read()
@@ -245,118 +230,104 @@ def main():
             break
 
         frame = cv2.resize(frame, (640, 480))
-
+        
+        # Enhance contrast using CLAHE
+        frame = enhance_contrast(frame)
          # Detect the projection area
-        projection_area = detect_projection_area(frame)
+        
 
-        # Detect Post-it note and crop the region
-        cropped, detected_color = detect_postit_and_draw(frame, projection_area=projection_area)
+        
+
+        if stored_projection_area is None:
+            projection_area = detect_projection_area(frame)
+            if projection_area is not None:
+                stored_projection_area = projection_area  # Store the detected area
+                print("Projection area detected and stored.")
+        else:
+            projection_area = stored_projection_area  # Use the stored area
 
         if projection_area is not None:
-            # Reset the missing counter when the projection area is detected
-            projection_area_missing_counter = 0
             # Draw the projection area as a blue polygon
             cv2.polylines(frame, [projection_area.astype(int)], True, (255, 0, 0), 2)
 
             # Display debug text
             cv2.putText(frame, "Projection Area Detected", (10, 50),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            
+        # Detect Post-it note and crop the region
+        cropped, detected_color = detect_postit_and_draw(frame, projection_area=projection_area)
+
+        if cropped is not None and projection_area is not None:
+            
+            gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
+            gray_cropped = cv2.GaussianBlur(gray_cropped, (11, 11), 0)
 
 
-            if cropped is not None:
-                
-                # Post-it detected
-                if not postit_detected:
-                    print("Post-it detected for the first time.")
-                    postit_detected = True
-                    postit_removed = False
+            # Calculate relative position
+            postit_rect = np.array([point[0] for point in detect_postit_and_draw.last_contour], dtype="float32")
+            relative_position = get_relative_position(postit_rect, projection_area)
 
+            # Smooth the relative position using EMA
+            if smoothed_position is None:
+                smoothed_position = relative_position  # Initialize with the first value
+            else:
+                smoothed_position = alpha * np.array(relative_position) + (1 - alpha) * np.array(smoothed_position)
 
-                # Calculate relative position
-                postit_rect = np.array([point[0] for point in detect_postit_and_draw.last_contour], dtype="float32")
-                relative_position = get_relative_position(postit_rect, projection_area)
+            # Check for significant movement
+            if stored_position is None:
+                stored_position = smoothed_position  # Initialize stored position
+            else:
+                distance = np.linalg.norm(np.array(smoothed_position) - np.array(stored_position))
+                if distance > movement_threshold_distance:
+                    stored_position = smoothed_position  # Update stored position if movement is significant
 
-                # Smooth the relative position using EMA
-                if smoothed_position is None:
-                    smoothed_position = relative_position  # Initialize with the first value
-                else:
-                    smoothed_position = alpha * np.array(relative_position) + (1 - alpha) * np.array(smoothed_position)
+            # Draw the Post-it center
+            postit_center = np.mean(postit_rect, axis=0).astype(int)
+            cv2.circle(frame, tuple(postit_center), 5, (0, 0, 255), -1)
+           
+            # Display the smoothed and stored relative positions
+            smoothed_text = f"Smoothed Pos: ({smoothed_position[0]:.2f}, {smoothed_position[1]:.2f})"
+            stored_text = f"Stored Pos: ({stored_position[0]:.2f}, {stored_position[1]:.2f})"
+            cv2.putText(frame, smoothed_text, (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            cv2.putText(frame, stored_text, (10, 70),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
-                # Check for significant movement
-                if stored_position is None:
-                    stored_position = smoothed_position  # Initialize stored position
-                else:
-                    distance = np.linalg.norm(np.array(smoothed_position) - np.array(stored_position))
-                    if distance > movement_threshold_distance:
-                        stored_position = smoothed_position  # Update stored position if movement is significant
+            
 
-                # Draw the Post-it center
-                postit_center = np.mean(postit_rect, axis=0).astype(int)
-                cv2.circle(frame, tuple(postit_center), 5, (0, 0, 255), -1)
-
-                # Display the smoothed and stored relative positions
-                smoothed_text = f"Smoothed Pos: ({smoothed_position[0]:.2f}, {smoothed_position[1]:.2f})"
-                stored_text = f"Stored Pos: ({stored_position[0]:.2f}, {stored_position[1]:.2f})"
-                cv2.putText(frame, smoothed_text, (10, 30),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                cv2.putText(frame, stored_text, (10, 70),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
-
-                gray_cropped = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
-                gray_cropped = cv2.GaussianBlur(gray_cropped, (11, 11), 0)
-
-                if prev_frame is None:
-                    prev_frame = gray_cropped
-                    continue
-
-                if detect_drawing(prev_frame, gray_cropped):
-                    drawing_detected = True
-                    no_movement_counter = 0
-                    drawing_completed = True
-                    print("Drawing detected on Post-it.")
-                    if validate_postit_with_drawing(cropped):
-                        print("Validation passed.")
-                        drawing_detected = True
-                        drawing_completed = True
-                        drawing_validated = True
-                        save_cropped_image(cropped)
-                        write_position_to_json(stored_position[0], stored_position[1], detected_color)
-                else:
-                    if drawing_detected:
-                        no_movement_counter += 1
-
-                if no_movement_counter >= movement_threshold and not drawing_validated:
-                    print("Drawing completed! Validating image...")
-                    if validate_postit_with_drawing(cropped):
-                        print("Validation passed.")
-                        drawing_detected = True
-                        drawing_completed = True
-                        drawing_validated = True
-                        
-                        
-
-                    else:
-                        print("Validation failed. Discarding image.")
-                        drawing_detected = False
-                        drawing_completed = False
-                        no_movement_counter = 0
-
+            if prev_frame is None:
                 prev_frame = gray_cropped
+                drawing_detected = True  
+                no_movement_counter = 0
+                continue
+
+            if detect_drawing(prev_frame, gray_cropped):
+                drawing_detected = True
+                no_movement_counter = 0
+            else:
+                if drawing_detected:
+                    no_movement_counter += 1
+            
+            if no_movement_counter >= movement_threshold:
+                """ print("Drawing detected! Validating image...")
+                if validate_postit_with_drawing(cropped): 
+                print("Validation passed. Saving image...")"""
                 
-            elif postit_detected and drawing_completed and drawing_validated and not postit_removed:
-                # Post-it was previously detected but is now missing
-                print("Post-it removed from the projection area.")
-                postit_removed = True
-                postit_detected = False
-                drawing_completed = False
+
                 
-               
+                #Save cropped Image of Post-it
                 file_path = os.path.join(output_directory, f"detected_postit.png")
+                cv2.imwrite(file_path, cropped) 
+    
+                print(f"Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
+
+                #Notify SVG converter
+                notify_svg_conversion(file_path, detected_color, relative_position)
+
                 
-                
-                # Notify SVG converter
-                notify_svg_conversion(file_path, detected_color)
-               
+                #Stop detection
+                #On Keypress "c" -> Capture new Post-it
+                #On Keypress "q" quit programm
                 while True:
                     print("Press 'c' to continue or 'q' to quit...")
                     key = cv2.waitKey(0) & 0xFF
@@ -368,30 +339,103 @@ def main():
                     elif key == ord('q'):
                         cap.release()
                         cv2.destroyAllWindows()
-                        return
-                
-             
+                        return 
 
-            elif postit_removed and cropped is not None:
-                # Post-it is detected again after removal
-                print("New Post-it detected.")
-                postit_detected = True
-                postit_removed = False
-                # drawing_completed = False  # Reset drawing state for new Post-it
 
-            
+            prev_frame = gray_cropped
 
+        # Failsafe key 'h' to save cropped image and notify SVG conversion
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('h') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit.png")
+            cv2.imwrite(file_path, cropped)
+            print(f"Failsafe: Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
         
-            
+        # Failsafe key 'w' to place Cube if detection failed
+        elif key == ord('w') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_bc.png")
+            print(f"Failsafe: Big Cube")
 
-        # Display the status on the frame
-            status_text = f"Post-it Detected: {postit_detected}, Removed: {postit_removed}, Drawing: {drawing_completed}"
-            cv2.putText(frame, status_text, (10, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        
+        # Failsafe key 'r' to place small Cube if detection failed
+        elif key == ord('r') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_sc.png")
+            print(f"Failsafe: Small Cube")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        
+        # Failsafe key 's' to place Triangle if detection failed
+        elif key == ord('s') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_bt.png")
+            print(f"Failsafe: Big triangle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        
+        # Failsafe key 'f' to place small Triangle if detection failed
+        elif key == ord('f') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_st.png")
+            print(f"Failsafe: Small triangle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        
+        # Failsafe key 'z' to place Circle if detection failed
+        elif key == ord('z') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_bci.png")
+            print(f"Failsafe: Big circle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+
+        # Failsafe key 'i' to place small Circle if detection failed
+        elif key == ord('i') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_sci.png")
+            print(f"Failsafe: Small circle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+
+        # Failsafe key 'j' to place Rectangle if detection failed
+        elif key == ord('j') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_br.png")
+            print(f"Failsafe: Big rectangle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+
+        # Failsafe key 'l' to place small rectangle if detection failed
+        elif key == ord('l') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_sr.png")
+            print(f"Failsafe: Small rectangle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        
+        # Press "p" to reset projection area
+        elif key == ord('p'):  
+            stored_projection_area = None
+            print("Projection area reset.")
+        if key == ord('q'):
+            break
 
         cv2.imshow("Webcam", frame)
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
 
     cap.release()
     cv2.destroyAllWindows()

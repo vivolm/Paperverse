@@ -1,3 +1,5 @@
+#Handles communication of different scripts via Websocket
+
 import asyncio
 import websockets
 import json
