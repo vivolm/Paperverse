@@ -3,12 +3,29 @@
 This project combines two programs to enable real-time detection of a Post-It note, automatic image cropping, and conversion of the cropped image into an SVG file. The system operates smoothly without requiring restarts, allowing multiple drawings to be processed in one session.
 
 The project consists of:
-1. **Python Program**: Detects a Post-It note, monitors for drawing activity, and saves the image when the drawing is complete.
-2. **JavaScript Program**: Automatically converts the saved Post-It image into an SVG file.
+1. **Websocket Programm (Python)**: Handles communication and datat transfer between scripts
+2. **Post-it Detection Program (Python)**: Detects a Post-It note, monitors for drawing activity, and saves the image when the drawing is complete.
+3. **SVG Conversion Program (JavaScript)**: Automatically converts the saved Post-It image into an SVG file.
 
 ---
 
-## **Python Program: Post-It Note Detection**
+## WebSocket Server  
+The WebSocket server handles communication between the different scripts (Python, Node.js, and the browser). It ensures smooth data transfer, allowing real-time updates between the components.  
+
+### How to Run:  
+1. Start the WebSocket server first:  
+   ```bash
+   python websocket_server.py
+   ```  
+2. Then, start the other scripts as needed:  
+   - **Python Detection Script:** `python postitDetection.py`  
+   - **JavaScript SVG Converter:** `node svgConverter.js`  
+
+This ensures that all components can communicate properly.
+
+---
+
+## **Post-it Detection Program**
 
 ### **Description**
 The Python program detects a yellow Post-It note in a webcam feed. It checks for drawing activity on the note and saves a cropped image of the Post-It when drawing stops. The image is stored in a shared directory and a notification file is created to trigger the SVG conversion program.
@@ -20,19 +37,18 @@ pip install opencv-python numpy
 ```
 
 ### **How to Run**
-1. Ensure your webcam is connected.
-2. Place a yellow Post-It note in the camera's view.
-3. Run the Python script:
+1. Ensure your webcam is connected and the projection is in frame (Note: There should be a clear visual distinction from the projection area to the rest of the captured area).
+2. Run the Python script:
    ```bash
    python postitDetection.py
    ```
-4. Start drawing on the Post-It. The program will automatically detect when you stop drawing and save the image.
-5. Press `c` to reset and allow for new drawings without restarting the program.
-6. Press `q` to quit the program.
+3. Start drawing on the Post-It (with a red marker). The program will automatically detect it as soon as you place it in the projection area and save the image.
+4. Press `c` to reset and allow for new drawings without restarting the program.
+5. Press `q` to quit the program.
 
 ### **Key Features**
 - **Post-It Detection**: Automatically detects a yellow Post-It note and aligns it even if tilted.
-- **Drawing Detection**: Monitors drawing activity and saves the image only when movement stops.
+- **Drawing Detection**: Monitors activity and saves the image when a postit is detected.
 - **Shared Directory**: Saves the cropped image into a shared folder (`shared/`).
 - **Notification File**: Creates a text file `shared/ready_for_svg.txt` with the path of the new image for the SVG conversion program.
 
@@ -54,7 +70,7 @@ Paperverse/
 ## **JavaScript Program: SVG Conversion**
 
 ### **Description**
-The JavaScript program watches the shared directory for new Post-It images. When a new image is detected, it processes the image to enhance its contrast and brightness, then converts it into an SVG file.
+The JavaScript program watches the shared directory for new Post-It images. When a new image is detected, it processes the image to extract only the red parts of the image (the drawing), then converts it into an SVG file.
 
 ### **Requirements**
 Make sure the following libraries are installed:
@@ -72,7 +88,7 @@ npm install sharp potrace fs
 
 ### **Key Features**
 - **Automatic Detection**: Watches for new images in the shared folder.
-- **Image Preprocessing**: Enhances the image contrast, brightness, and removes saturation.
+- **Image Preprocessing**: Extracts Red parts of Image, isolating only the drawing.
 - **SVG Conversion**: Converts the processed image into an SVG file using Potrace.
 - **File Management**: Saves the resulting SVG in the `shared/` directory.
 
@@ -111,15 +127,19 @@ The two programs work together as follows:
 ---
 
 ## **Run Both Programs**
-1. Start the Python program:
+1. Start the Websocket Server
    ```bash
-   python postit_detection.py
+   python websocket_server.py
    ```
-2. In a separate terminal, start the JavaScript program:
+3. Start the Python program:
    ```bash
-   node svg_converter.js
+   python postitDetection.py
    ```
-3. Begin drawing on the Post-It note. When you finish drawing, the SVG file will be generated automatically in the shared folder.
+4. In a separate terminal, start the JavaScript program:
+   ```bash
+   node svgConverter.js
+   ```
+5. Begin drawing on the Post-It note. When you place the drawing, the SVG file will be generated automatically in the shared folder.
 
 ---
 
@@ -130,7 +150,5 @@ The two programs work together as follows:
 
 ---
 
-## **Conclusion**
-This project integrates Python and JavaScript programs to create a seamless system for detecting a Post-It note, tracking drawings, and converting them into SVG files. It allows for continuous use without restarting the programs, making it efficient and user-friendly.
 
 
