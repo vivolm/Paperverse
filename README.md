@@ -3,7 +3,7 @@
 This project combines two programs to enable real-time detection of a Post-It note, automatic image cropping, and conversion of the cropped image into an SVG file. The system operates smoothly without requiring restarts, allowing multiple drawings to be processed in one session.
 
 The project consists of:
-1. **Websocket Programm (Python)**: Handles communication and datat transfer between scripts
+1. **Websocket Program (Python)**: Handles communication and datat transfer between scripts
 2. **Post-it Detection Program (Python)**: Detects a Post-It note, monitors for drawing activity, and saves the image when the drawing is complete.
 3. **SVG Conversion Program (JavaScript)**: Automatically converts the saved Post-It image into an SVG file.
 
