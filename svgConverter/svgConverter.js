@@ -47,10 +47,16 @@ ws.on("open", () => {
 
 
 // Function to extract red parts of the image
+// Function to extract red parts of the image
 async function extractRedParts(inputImage, outputImage) {
   console.log("Extracting red parts of the image...");
 
-  const image = sharp(inputImage);
+  // Increase saturation before processing
+  const image = sharp(inputImage).modulate({
+    saturation: 2.5,
+    brightness: 1.0 // Adjust this value to control the saturation level
+  });
+
   const { data, info } = await image
     .raw()
     .toBuffer({ resolveWithObject: true });
@@ -71,7 +77,7 @@ async function extractRedParts(inputImage, outputImage) {
     const b = data[i + 2];
 
     // Detect red pixels
-    if (r > 10 && r > g * 1.3 && r > b * 1.3) {
+    if (r > 8 && r > g * 1.3 && r > b * 1.3) {
       // Turn red pixels to black
       redMask[i] = 0; // Red
       redMask[i + 1] = 0; // Green
@@ -139,7 +145,7 @@ async function simplifyImage(inputImage, outputImage) {
 async function preprocessImage(inputImage, outputImage) {
   console.log("Preprocessing the image...");
 
-  await sharp(inputImage).greyscale().modulate({ brightness: 1.3 }).toFile(outputImage);
+  await sharp(inputImage).greyscale().modulate({ brightness: 1.0 }).toFile(outputImage);
 
   console.log(`Image preprocessing complete. Saved to ${outputImage}`);
 }
@@ -163,7 +169,7 @@ function convertToSvg() {
     console.log("copied Json");
     ws.send(JSON.stringify(dataSvg));
     console.log("sent svg to browser.");
-    
+    //fs.writeFileSync(outputSvg, trace.getSVG());
    
     
   });

@@ -1,1 +1,1 @@
-shared\detected_postit.png, "yellow"
+shared\detected_postit_sci.png, "yellow"

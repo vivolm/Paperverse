@@ -53,8 +53,8 @@ def detect_postit_and_draw(frame, projection_area=None):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     # Define HSV ranges for yellow and blue Post-its
-    lower_yellow = np.array([20, 30, 70])
-    upper_yellow = np.array([50, 255, 255])
+    lower_yellow = np.array([20, 30, 60])
+    upper_yellow = np.array([80, 255, 255])
 
     lower_blue = np.array([90, 50, 50])
     upper_blue = np.array([130, 255, 255])
@@ -121,7 +121,7 @@ def enhance_contrast(image):
     l, a, b = cv2.split(lab)
     
     # Apply CLAHE to the L (lightness) channel
-    clahe = cv2.createCLAHE(clipLimit=1.8, tileGridSize=(8, 8))
+    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(8, 8))
     l = clahe.apply(l)
     
     # Merge the enhanced L channel back with A and B channels
@@ -201,7 +201,7 @@ def detect_drawing(prev_frame, current_frame):
 
 
 def main():
-    cap = cv2.VideoCapture(3)
+    cap = cv2.VideoCapture(2)
     prev_frame = None
     drawing_detected = False
     no_movement_counter = 0
@@ -213,7 +213,7 @@ def main():
     smoothed_position = None  # To store the smoothed position
     stored_position = None  # To store the position that updates only on significant movement
     movement_threshold_distance = 0.05  # Threshold for significant movement in relative position (normalized units)
-
+    stored_projection_area = None
     
 
     
@@ -230,10 +230,17 @@ def main():
         # Enhance contrast using CLAHE
         frame = enhance_contrast(frame)
          # Detect the projection area
-        projection_area = detect_projection_area(frame)
+        
 
-        # Detect Post-it note and crop the region
-        cropped, detected_color = detect_postit_and_draw(frame, projection_area=projection_area)
+        
+
+        if stored_projection_area is None:
+            projection_area = detect_projection_area(frame)
+            if projection_area is not None:
+                stored_projection_area = projection_area  # Store the detected area
+                print("Projection area detected and stored.")
+        else:
+            projection_area = stored_projection_area  # Use the stored area
 
         if projection_area is not None:
             # Draw the projection area as a blue polygon
@@ -243,6 +250,8 @@ def main():
             cv2.putText(frame, "Projection Area Detected", (10, 50),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             
+        # Detect Post-it note and crop the region
+        cropped, detected_color = detect_postit_and_draw(frame, projection_area=projection_area)
 
         if cropped is not None and projection_area is not None:
             
@@ -300,10 +309,10 @@ def main():
                 if validate_postit_with_drawing(cropped): 
                 print("Validation passed. Saving image...")"""
                 
-                file_path = os.path.join(output_directory, f"detected_postit.png")
-                cv2.imwrite(file_path, cropped)
+                """ file_path = os.path.join(output_directory, f"detected_postit.png")
+                cv2.imwrite(file_path, cropped) """
                 
-                print(f"Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
+                #print(f"Cropped {detected_color.capitalize()} Post-it note saved as {file_path}")
 
                 # Notify SVG converter
                 
@@ -314,17 +323,12 @@ def main():
                         "position": {"x": float(stored_position[0]), "y": float(stored_position[1])}
                     } 
                 }
-
-
-
-                file_path = os.path.join(output_directory, "detected_postit.png")
-                cv2.imwrite(file_path, cropped)
                 
-                notify_svg_conversion(file_path, detected_color, relative_position)
+                #notify_svg_conversion(file_path, detected_color, relative_position)
 
                 
 
-                while True:
+                """ while True:
                     print("Press 'c' to continue or 'q' to quit...")
                     key = cv2.waitKey(0) & 0xFF
                     if key == ord('c'):
@@ -335,7 +339,7 @@ def main():
                     elif key == ord('q'):
                         cap.release()
                         cv2.destroyAllWindows()
-                        return
+                        return """
                 """ else:
                     print("Validation failed. Discarding image.")
                     drawing_detected = False
@@ -353,7 +357,66 @@ def main():
             # Notify SVG converter
             notify_svg_conversion(file_path, detected_color, relative_position)
             print("Failsafe: SVG conversion triggered.")
+        
+        elif key == ord('w') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_bc.png")
+            print(f"Failsafe: Big Cube")
 
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        elif key == ord('r') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_sc.png")
+            print(f"Failsafe: Small Cube")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        elif key == ord('s') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_bt.png")
+            print(f"Failsafe: Big triangle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        elif key == ord('f') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_st.png")
+            print(f"Failsafe: Small triangle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        elif key == ord('z') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_bci.png")
+            print(f"Failsafe: Big circle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        elif key == ord('i') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_sci.png")
+            print(f"Failsafe: Small circle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        elif key == ord('j') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_br.png")
+            print(f"Failsafe: Big rectangle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        elif key == ord('l') and cropped is not None and detected_color is not None:
+            file_path = os.path.join(output_directory, "detected_postit_sr.png")
+            print(f"Failsafe: Small rectangle")
+
+            # Notify SVG converter
+            notify_svg_conversion(file_path, detected_color, relative_position)
+            print("Failsafe: SVG conversion triggered.")
+        elif key == ord('p'):  # Reset projection area
+            stored_projection_area = None
+            print("Projection area reset.")
         if key == ord('q'):
             break
 

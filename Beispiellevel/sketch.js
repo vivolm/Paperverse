@@ -196,7 +196,7 @@ function draw() {
   } else if (currentLevel === "balls") {
     snake.visible = false;
     image(bg.balls, 0, 0, width, height);
-    tint(255, 90);
+    tint(255, 50);
     image(ladder, width / 2 - 50, -50);
     noTint();
   }
@@ -230,11 +230,11 @@ function draw() {
       if (startGame && currentLevel === "tutorial") {
         //Infotext to signal when player can start safely
         textFont(font);
-        textSize(36);
+        textSize(48);
         textAlign(CENTER);
         noStroke();
         fill(0);
-        text("place post-it & draw =>", width / 4, height / 4);
+        text("draw & place post-it =>", width / 4.75, height / 4);
       }
 
       if (currentLevel === "snake") {
@@ -917,7 +917,7 @@ function createSVG(svg, debug) {
           fromPath: htmlPath,
           color: "white",
           stroke: "black",
-          weight: 2,
+          weight: 5,
         },
         { isStatic: false, mass: 100, label: "drawnBody", friction: 0.5, restitution: 0.6 }
       );
