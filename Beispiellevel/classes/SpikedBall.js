@@ -4,12 +4,7 @@ class SpikedBall extends Ball {
   }
 
   addBody() {
-    this.circleBody = Matter.Bodies.circle(
-      this.attributes.x,
-      this.attributes.y,
-      this.attributes.r,
-      this.options
-    );
+    this.circleBody = Matter.Bodies.circle(this.attributes.x, this.attributes.y, this.attributes.r, this.options);
     const spikeCount = 12;
     this.spikeBodies = this.createSpikes(spikeCount);
 
@@ -26,12 +21,12 @@ class SpikedBall extends Ball {
   }
 
   createSpikes(spikeCount) {
-    this.spikes = []; // Initialize spikes array
+    this.spikes = [];
     const spikeAngle = (Math.PI * 2) / spikeCount;
 
     // Define spike dimensions based on the circle's radius
-    const spikeLength = this.attributes.r * 0.6; // Length of the spike
-    const spikeWidth = this.attributes.r * 0.2; // Width of the spike
+    const spikeLength = this.attributes.r * 0.6;
+    const spikeWidth = this.attributes.r * 0.2;
 
     for (let i = 0; i < spikeCount; i++) {
       const angle = spikeAngle * i;
@@ -59,7 +54,7 @@ class SpikedBall extends Ball {
       Matter.Body.setPosition(spike, { x: baseX, y: baseY });
 
       if (i >= 7 && i <= 10) {
-        this.spikes.push(spike); // Add spike to the spikes array
+        this.spikes.push(spike);
       }
     }
     return this.spikes;
@@ -71,16 +66,15 @@ class SpikedBall extends Ball {
   }
 
   drawSpikes() {
-    stroke(0); // Color for spikes
-    // fill(255, 0, 0); // Fill color for spikes
+    stroke(0);
     for (const spike of this.spikes) {
-      const { vertices } = spike; // Get the vertices of the spike
+      const { vertices } = spike;
 
       beginShape();
       for (const v of vertices) {
         vertex(v.x, v.y);
       }
-      endShape(CLOSE); // Close the shape to form a triangle
+      endShape(CLOSE);
     }
   }
 }

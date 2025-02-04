@@ -18,31 +18,32 @@ const world = engine.world;
 const runner = Runner.create();
 const socket = new WebSocket("ws://localhost:8080");
 
-// global variables for tracking bodies & assets
+// global variables for bodies & assets
 let drawBodies = [];
-let svgShapes = [];
-let matterSVG;
 let characterBody;
 let snakeSensor;
 let leftBall;
 let rightBall;
 let leftRotating = true;
 let rightRotating = true;
-let exampleSVG = {
-  svg: '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" version="1.1">/n/t<path d="M 102.814 69.078 C 86.592 71.458, 81.106 74.105, 70.316 84.761 C 64.992 90.019, 62.310 94.894, 59.180 105 C 54.772 119.235, 53.730 126.031, 54.919 132.778 C 55.474 135.925, 56.183 140.548, 56.496 143.052 C 57.629 152.142, 67.764 168.535, 79.708 180.595 C 84.970 185.909, 99.013 188.493, 108.500 185.893 C 112.628 184.761, 126.614 175.865, 128.650 173.076 C 129.282 172.209, 131.679 169.475, 133.976 167.001 C 138.531 162.094, 145.833 150.556, 147.900 145 C 148.616 143.075, 149.719 140.419, 150.351 139.097 C 152.235 135.157, 151.845 109.280, 149.837 105 C 145.853 96.505, 143 90.085, 143 89.612 C 143 89.331, 141.688 87.156, 140.085 84.780 C 136.557 79.553, 130.412 74.999, 121.482 70.992 C 114.577 67.894, 112.405 67.671, 102.814 69.078 M 97.641 78.059 C 92.877 78.613, 90.109 79.489, 88.577 80.928 C 87.364 82.068, 86.063 83, 85.686 83 C 85.308 83, 84.208 83.787, 83.239 84.750 C 82.271 85.713, 80.359 87.400, 78.989 88.500 C 73.130 93.207, 68 102.809, 68 109.067 C 68 110.615, 67.626 112.113, 67.169 112.395 C 64.071 114.310, 63.394 134.720, 66.084 145.155 C 66.993 148.682, 70.656 157, 73.434 161.844 C 75.654 165.716, 82.210 171.992, 87 174.832 C 90.687 177.018, 92.674 177.488, 98, 177.433 C 106.312 177.347, 110.076 175.522, 118.427 167.533 C 122.065 164.053, 126.572 160.039, 128.442 158.612 C 135.149 153.496, 143.006 135.387, 142.992 125.076 C 142.972 110.344, 137.374 93.096, 130.415, 86.326 C 126.462 82.482, 124.552 81.341, 116.703 78.141 C 113.610 76.879, 108.008 76.855, 97.641 78.059" stroke="none" fill="black" fill-rule="evenodd"/>/n</svg>',
-};
+let lastVelocity = { x: 0, y: 0 };
 
-// global variable for data tracking
+// svg variables
+let svgShapes = [];
+let matterSVG;
 let lastPositionColor = {
   x: null,
   y: null,
   color: null,
 };
+let exampleSVG = {
+  svg: '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" version="1.1">/n/t<path d="M 102.814 69.078 C 86.592 71.458, 81.106 74.105, 70.316 84.761 C 64.992 90.019, 62.310 94.894, 59.180 105 C 54.772 119.235, 53.730 126.031, 54.919 132.778 C 55.474 135.925, 56.183 140.548, 56.496 143.052 C 57.629 152.142, 67.764 168.535, 79.708 180.595 C 84.970 185.909, 99.013 188.493, 108.500 185.893 C 112.628 184.761, 126.614 175.865, 128.650 173.076 C 129.282 172.209, 131.679 169.475, 133.976 167.001 C 138.531 162.094, 145.833 150.556, 147.900 145 C 148.616 143.075, 149.719 140.419, 150.351 139.097 C 152.235 135.157, 151.845 109.280, 149.837 105 C 145.853 96.505, 143 90.085, 143 89.612 C 143 89.331, 141.688 87.156, 140.085 84.780 C 136.557 79.553, 130.412 74.999, 121.482 70.992 C 114.577 67.894, 112.405 67.671, 102.814 69.078 M 97.641 78.059 C 92.877 78.613, 90.109 79.489, 88.577 80.928 C 87.364 82.068, 86.063 83, 85.686 83 C 85.308 83, 84.208 83.787, 83.239 84.750 C 82.271 85.713, 80.359 87.400, 78.989 88.500 C 73.130 93.207, 68 102.809, 68 109.067 C 68 110.615, 67.626 112.113, 67.169 112.395 C 64.071 114.310, 63.394 134.720, 66.084 145.155 C 66.993 148.682, 70.656 157, 73.434 161.844 C 75.654 165.716, 82.210 171.992, 87 174.832 C 90.687 177.018, 92.674 177.488, 98, 177.433 C 106.312 177.347, 110.076 175.522, 118.427 167.533 C 122.065 164.053, 126.572 160.039, 128.442 158.612 C 135.149 153.496, 143.006 135.387, 142.992 125.076 C 142.972 110.344, 137.374 93.096, 130.415, 86.326 C 126.462 82.482, 124.552 81.341, 116.703 78.141 C 113.610 76.879, 108.008 76.855, 97.641 78.059" stroke="none" fill="black" fill-rule="evenodd"/>/n</svg>',
+};
 
 let positionData;
 let svgString;
 
-//Anim Var
+// animation variables
 let angryAnim;
 let idleAnim;
 let loseAnim;
@@ -51,17 +52,16 @@ let thinkAnim;
 let waitAnim;
 let winAnim;
 let font;
-
-//Snake Anim
+let stevie;
+let snake;
 let snakeIdleAni;
 let snakeDeathAni;
 
-//Framerate
 let fps = 9;
 
 let endFrame;
 
-//Hintergründe
+// backgrounds
 let bg = {
   tutorial: null,
   bridge: null,
@@ -69,23 +69,14 @@ let bg = {
   balls: null,
 };
 
-//Sound
-let angrySound;
-
 // global game logic
 let gameState = "runGame";
 let currentLevel = "tutorial";
 
 let startGame = false;
 
-//make sure function for default animation sequence is called once
+// make sure function for default animation sequence is called once
 let defaultLock = false;
-
-let lastVelocity = { x: 0, y: 0 }; // Variable to store the last velocity
-
-//Stickman
-let stevie;
-let snake;
 
 let outro;
 
@@ -145,6 +136,8 @@ function preload() {
 
 function setup() {
   const canvas = createCanvas(windowWidth, windowHeight + 10);
+
+  // setup outro video
   outro = createVideo("./Assets/PaperverseOutro.mp4");
   outro.parent("sketchHolder");
   outro.size(width, height);
@@ -176,7 +169,7 @@ function draw() {
     image(bg.tutorial, 0, 0, width, height);
     snake.visible = false;
 
-    //added level change else gate is drawn when gameState changes back to runGame
+    // added level change else gate is drawn when gameState changes back to runGame
     if (gameState === "runGame" || gameState === "levelChange") {
       animation(gateHold, width / 2 + width / 4, height / 2 - height / 9);
     }
@@ -209,7 +202,8 @@ function draw() {
       Body.rotate(rightBall.body, radians(0.5));
     }
     if (!leftRotating && !rightRotating) {
-      outro.show();4
+      outro.show();
+      4;
       outro.loop();
       outro.play();
     }
@@ -228,7 +222,6 @@ function draw() {
   switch (gameState) {
     case "runGame":
       if (startGame && currentLevel === "tutorial") {
-        //Infotext to signal when player can start safely
         textFont(font);
         textSize(48);
         textAlign(CENTER);
@@ -290,7 +283,7 @@ function winSequence() {
 
     gameState = "runGame";
 
-    switchLevel(currentLevel); // Pass the current level to switchLevel
+    switchLevel(currentLevel);
   }
 }
 
@@ -312,26 +305,26 @@ function failSequence() {
 }
 
 function mousePressed() {
+  // for debugging and testing purposes
   createSVG(exampleSVG.svg, true);
 }
 
 function switchLevel(input) {
-  // Create a mapping of level names to their next levels
+  // mapping of level names to their next levels
   const levelMapping = {
     tutorial: "bridge",
     bridge: "snake",
     snake: "balls",
-    balls: null, // No next level after "balls"
+    balls: null,
   };
 
   let nextLevelName;
 
-  // Check if the input is a string (key) or a string (current level)
   if (!isNaN(input)) {
-    // Convert the string input to a number
+    // convert string to number
     const key = parseInt(input, 10);
 
-    // Map the key to the corresponding level name
+    // map key to corresponding level name
     const keyMapping = {
       1: "tutorial",
       2: "bridge",
@@ -340,21 +333,19 @@ function switchLevel(input) {
     };
     nextLevelName = keyMapping[key];
   } else if (typeof input === "string") {
-    // Get the next level name based on the current level
     nextLevelName = levelMapping[input];
   }
 
-  // Check if the next level name exists in the mapping
   if (nextLevelName) {
-    createLevel(nextLevelName, true); // Pass the next level name
-    currentLevel = nextLevelName; // Update the current level
+    createLevel(nextLevelName, true);
+    currentLevel = nextLevelName;
   } else {
-    console.log("no more levels to switch to")
+    console.log("no more levels to switch to");
   }
 }
 
 function keyPressed() {
-  switchLevel(key); // Pass the key pressed to switchLevel
+  switchLevel(key);
 }
 
 function windowResized() {
@@ -368,6 +359,7 @@ function windowResized() {
   }
 }
 
+// read the position of the drawing from the json
 async function getDrawPosition() {
   let position_color = {
     x: 0,
@@ -386,12 +378,13 @@ async function getDrawPosition() {
     position_color.x = data.position.x;
     position_color.y = data.position.y;
     position_color.color = data.color;
-    return position_color; // Return the position/color object
+    return position_color;
   } catch (error) {
     console.error("There was a problem with the fetch operation:", error);
   }
 }
 
+// level manager function
 function createLevel(levelIndex, clear) {
   // delete all previously created and drawn bodies (e.g. on window resize, level change)
   if (clear) {
@@ -537,7 +530,6 @@ function createLevel(levelIndex, clear) {
     },
     balls: {
       // balls level
-
       terrain: {
         leftWall: {
           x: dim.balls.leftWall.w / 2,
@@ -581,12 +573,12 @@ function createLevel(levelIndex, clear) {
     },
   };
 
-  // access the correct level data
+  // access the data of the correct level
   level = levels[levelIndex];
 
   // create bodies (e.g. static/dynamic geo, sensors, characters)
   if (level.terrain) {
-    // Access terrain properties directly
+    // access terrain properties directly
     Object.values(level.terrain).forEach((geo) => {
       let levelGeo = new Block(
         world,
@@ -605,31 +597,19 @@ function createLevel(levelIndex, clear) {
     });
   }
 
-  // Create sensors (e.g., for collision detection)
+  // create sensors
   if (level.sensors) {
     Object.values(level.sensors).forEach((sensor) => {
       if (sensor.label === "snake") {
-        snakeSensor = new Block(
-          world,
-          { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" },
-          { isStatic: true, isSensor: true, label: sensor.label },
-          "CORNER"
-        );
-        // drawBodies.push(snakeSensor);
+        snakeSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" }, { isStatic: true, isSensor: true, label: sensor.label }, "CORNER");
       } else {
         let levelSensor;
-        levelSensor = new Block(
-          world,
-          { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" },
-          { isStatic: true, isSensor: true, label: sensor.label },
-          "CORNER"
-        );
-        // drawBodies.push(levelSensor);
+        levelSensor = new Block(world, { x: sensor.x, y: sensor.y, w: sensor.w, h: sensor.h, color: "red" }, { isStatic: true, isSensor: true, label: sensor.label }, "CORNER");
       }
     });
   }
 
-  // Create spikey ball (e.g. for obstacles)
+  // create spikey ball
   if (level.spikeBall) {
     Object.values(level.spikeBall).forEach((spikey) => {
       if (spikey.label === "leftBall") {
@@ -664,7 +644,7 @@ function createLevel(levelIndex, clear) {
     });
   }
 
-  // Create button
+  // create button
   if (level.button) {
     Object.values(level.button).forEach((button) => {
       let buttonBlock;
@@ -698,35 +678,19 @@ function createLevel(levelIndex, clear) {
     });
   }
 
-  // Create character
+  // create character
   if (level.char) {
     const char = level.char;
-    characterBody = new Block(
-      world,
-      { x: char.x, y: char.y, w: char.w, h: char.h, color: "black" },
-      { restitution: 0.5, friction: 0.5 }
-    );
+    characterBody = new Block(world, { x: char.x, y: char.y, w: char.w, h: char.h, color: "black" }, { restitution: 0.5, friction: 0.5 });
     // show char collision box for debugging purposes
     // drawBodies.push(characterBody);
   }
 }
 
-// Check velocity of the svg body right before the collision with button
-Matter.Events.on(engine, "beforeUpdate", function () {
-  if (currentLevel === "tutorial") {
-    Matter.Composite.allBodies(world).forEach((body) => {
-      if (body.label === "drawnBody") {
-        lastVelocity = body.velocity; // Store the current velocity
-      }
-    });
-  }
-});
-
 // check for win/lose conditions by detecting collisions
 Events.on(engine, "collisionStart", function (event) {
   if (gameState === "runGame" && matterSVG) {
     const pairs = event.pairs;
-    // check win/lose conditions for bridge level
     if (currentLevel === "bridge") {
       let winSensors = [];
       let failSensors = [];
@@ -750,7 +714,6 @@ Events.on(engine, "collisionStart", function (event) {
         gameState = "failure";
       }
     } else if (currentLevel === "balls") {
-      // ball level
       let query = [];
       let svg;
       const bodies = Composite.allBodies(world);
@@ -769,63 +732,50 @@ Events.on(engine, "collisionStart", function (event) {
         if (collisionRecord.length >= 2) {
           let depth = Query.collides(svg, query)[0].depth;
           if (Math.abs(depth) > 10) {
-            console.log(collisionRecord[1].bodyA.label);
-            console.log(collisionRecord[1].bodyB.label);
-            if (
-              collisionRecord[1].bodyA.label === "leftBall" ||
-              collisionRecord[1].bodyB.label === "leftBall"
-            ) {
+            if (collisionRecord[1].bodyA.label === "leftBall" || collisionRecord[1].bodyB.label === "leftBall") {
               leftRotating = false;
-            } else if (
-              collisionRecord[1].bodyA.label === "rightBall" ||
-              collisionRecord[1].bodyB.label === "rightBall"
-            )
-              rightRotating = false;
+            } else if (collisionRecord[1].bodyA.label === "rightBall" || collisionRecord[1].bodyB.label === "rightBall") rightRotating = false;
           }
         }
       }
     } else if (currentLevel === "tutorial") {
-      // tutorial and puzzle button level
       const massThreshold = 13;
       const velocityThreshold = 9;
 
       pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
 
-        // Determine which body is the button and which is the colliding body
-        const buttonBody =
-          bodyA.label === "buttonTop" ? bodyA : bodyB.label === "buttonTop" ? bodyB : null;
+        // determine which body is the button and which is the colliding body
+        const buttonBody = bodyA.label === "buttonTop" ? bodyA : bodyB.label === "buttonTop" ? bodyB : null;
         const collidingBody = buttonBody === bodyA ? bodyB : bodyA;
 
-        // Check if the colliding body has the required mass and velocity
+        // check if the colliding body has the required mass and velocity
         if (buttonBody && collidingBody) {
           const collidingMass = collidingBody.mass;
           const collidingVelocity = Matter.Vector.magnitude(lastVelocity);
           console.log(collidingMass);
 
           if (collidingMass >= massThreshold && collidingVelocity >= velocityThreshold) {
-            // Press the button down
             pressButton(buttonBody);
           }
         }
       });
     } else if (currentLevel === "snake") {
-      // tutorial and puzzle button level
       const massThreshold = 5;
 
       pairs.forEach((pair) => {
         const { bodyA, bodyB } = pair;
 
-        // Determine which body is the button and which is the colliding body
+        // determine which body is the snake and which is the colliding body
         const snakeBody = bodyA.label === "snake" ? bodyA : bodyB.label === "snake" ? bodyB : null;
         const collidingBody = snakeBody === bodyA ? bodyB : bodyA;
 
-        // Check if the colliding body has the required mass and velocity
+        // check if the colliding body has the required mass and velocity
         if (snakeBody && collidingBody) {
           const collidingMass = collidingBody.mass;
 
           if (collidingMass >= massThreshold) {
-            // Squash the snake and win level
+            // squash the snake and win level
             gameState = "win";
           }
         }
@@ -834,28 +784,42 @@ Events.on(engine, "collisionStart", function (event) {
   }
 });
 
+// for correct values, check velocity of the svg body right before the collision with button
+Matter.Events.on(engine, "beforeUpdate", function () {
+  if (currentLevel === "tutorial") {
+    Matter.Composite.allBodies(world).forEach((body) => {
+      if (body.label === "drawnBody") {
+        lastVelocity = body.velocity;
+      }
+    });
+  }
+});
+
+// translate the button to imitate press
 function pressButton(button) {
-  // Move the button down
   Body.translate(button, { x: 0, y: 10 });
   gameState = "win";
 
-  // Move it back up after a short delay
+  // move button back up after short delay
   setTimeout(() => {
     Body.translate(button, { x: 0, y: -10 });
-  }, 500); // Adjust the delay as needed
+  }, 500);
 }
 
+// connect to the main websocket
 socket.addEventListener("open", () => {
   console.log("Connected to WebSocket Server");
-  socket.send(JSON.stringify({ type: "browser" })); // Identify as Browser client
+  socket.send(JSON.stringify({ type: "browser" }));
 });
 
+// listen for svg message and then create the shape
 socket.onmessage = (ev) => {
-  const message = JSON.parse(ev.data); // Parse the JSON string
+  const message = JSON.parse(ev.data);
 
   createSVG(message.svg, false);
 };
 
+// NOTE: currently not in usage
 function simplifySVG(svg) {
   let path = new Path(svg);
   // Create a new group to hold the simplified paths
@@ -868,14 +832,7 @@ function simplifySVG(svg) {
     simplifiedGroup.addChild(path);
   }
 
-  // else if (child instanceof paper.CompoundPath) {
-  //   child.simplify(simplifyStrength);
-  //   simplifiedGroup.addChild(child);
-  // } else if (child instanceof paper.Shape) {
-  //   console.log("Shape object ignored");
-  // }
-
-  // Export the simplified group back to an SVG string
+  // export the simplified group back to an SVG string
   const svgString = simplifiedGroup.exportSVG({ asString: true });
 
   // turn that string into a DOM element
@@ -885,6 +842,7 @@ function simplifySVG(svg) {
   return paths;
 }
 
+// function that creates the matter svg object
 function createSVG(svg, debug) {
   getDrawPosition().then((pos) => {
     if (gameState === "runGame" && svg) {

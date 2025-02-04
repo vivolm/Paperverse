@@ -7,7 +7,7 @@ class PolygonFromSVG extends Block {
 
   addBody() {
     // set values for restitution calculation before constructing body
-    this.restitutionScale = 0.6; // 1 equals no scaling, anything below decreases the restitution
+    this.restitutionScale = 0.6;
     this.minMass = 1;
     this.maxMass = 80;
 
@@ -19,45 +19,6 @@ class PolygonFromSVG extends Block {
         // use a path provided directly
         let vertices = Matter.Svg.pathToVertices(this.attributes.fromPath, this.attributes.sample);
         this.addBodyVertices(vertices);
-      } else {
-        if (this.attributes.fromId) {
-          // use a path of SVG embedded in current HTML page
-          let path = document.getElementById(this.attributes.fromId);
-          if (null != path) {
-            let vertices = Matter.Svg.pathToVertices(path, this.attributes.sample);
-            this.addBodyVertices(vertices);
-          }
-        } else {
-          // use a path in separate SVG file
-          if (this.attributes.sync) {
-            const request = new XMLHttpRequest();
-            request.open("GET", this.attributes.fromFile, false); // `false` makes the request synchronous
-            request.send(null);
-            const response = request.responseText;
-            const parser = new DOMParser();
-            const svgDoc = parser.parseFromString(response, "image/svg+xml");
-            const path = svgDoc.querySelector("path");
-            let vertices = Matter.Svg.pathToVertices(path, this.attributes.sample);
-            this.addBodyVertices(vertices);
-            Matter.World.add(this.world, [this.body]);
-            if (this.attributes.done) {
-              this.attributes.done(this, true);
-            }
-          } else {
-            let that = this;
-            httpGet(this.attributes.fromFile, "text", false, function (response) {
-              const parser = new DOMParser();
-              const svgDoc = parser.parseFromString(response, "image/svg+xml");
-              const path = svgDoc.querySelector("path");
-              let vertices = Matter.Svg.pathToVertices(path, that.attributes.sample);
-              that.addBodyVertices(vertices);
-              Matter.Composite.add(that.world, [that.body]);
-              if (that.attributes.done) {
-                that.attributes.done(that, false);
-              }
-            });
-          }
-        }
       }
     }
     this.setRestitution();
@@ -70,14 +31,7 @@ class PolygonFromSVG extends Block {
     } else {
       console.log("Drawing is intersecting");
     }
-    this.body = Matter.Bodies.fromVertices(
-      0,
-      0,
-      Matter.Vertices.scale(vertices, this.attributes.scale, this.attributes.scale),
-      this.options,
-      0.15,
-      0.2
-    );
+    this.body = Matter.Bodies.fromVertices(0, 0, Matter.Vertices.scale(vertices, this.attributes.scale, this.attributes.scale), this.options, 0.15, 0.2);
     if (this.body) {
       if (this.attributes.x !== undefined) {
         Matter.Body.setPosition(this.body, this.attributes);
@@ -86,14 +40,8 @@ class PolygonFromSVG extends Block {
       }
       if (this.attributes.image) {
         this.offset = {
-          x:
-            this.offset.x +
-            (this.attributes.image.width / 2) * this.attributes.scale -
-            (this.body.position.x - this.body.bounds.min.x),
-          y:
-            this.offset.y +
-            (this.attributes.image.height / 2) * this.attributes.scale -
-            (this.body.position.y - this.body.bounds.min.y),
+          x: this.offset.x + (this.attributes.image.width / 2) * this.attributes.scale - (this.body.position.x - this.body.bounds.min.x),
+          y: this.offset.y + (this.attributes.image.height / 2) * this.attributes.scale - (this.body.position.y - this.body.bounds.min.y),
         };
       }
     } else if (this.attributes.fromPath) {
@@ -119,9 +67,7 @@ class PolygonFromSVG extends Block {
   setRestitution() {
     let mass = this.body.mass;
     let clampedMass = Math.max(this.minMass, Math.min(mass, this.maxMass));
-    let restitution =
-      (1 - (clampedMass - this.minMass) / (this.maxMass - this.minMass)) *
-      Math.max(0, Math.min(this.restitutionScale, 1));
+    let restitution = (1 - (clampedMass - this.minMass) / (this.maxMass - this.minMass)) * Math.max(0, Math.min(this.restitutionScale, 1));
     this.body.restitution = restitution;
   }
 }
